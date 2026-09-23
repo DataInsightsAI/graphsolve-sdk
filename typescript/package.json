@@ -1,0 +1,61 @@
+{
+  "name": "@graphsolve/sdk",
+  "version": "1.0.34",
+  "description": "Client for the GraphSolve engine API: production-network solving, PVT/EOS, flow assurance and transient multiphase flow.",
+  "license": "Apache-2.0",
+  "author": "Data Insights AI",
+  "homepage": "https://graphsolve.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DataInsightsAI/graphsolve-sdk.git",
+    "directory": "typescript"
+  },
+  "keywords": [
+    "petroleum",
+    "reservoir",
+    "production",
+    "pvt",
+    "eos",
+    "multiphase",
+    "flow-assurance"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src test",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.5.0",
+    "eslint": "^10.10.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^5.0.0"
+  }
+}

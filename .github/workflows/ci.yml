@@ -1,0 +1,193 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# This repo is public, so a pull request can run code from anyone's fork.
+# Use `pull_request`, not `pull_request_target` or `workflow_run` — those run
+# with the base repo's secrets while checking out the fork's code.
+# No job here needs a credential, so none has one. Publishing is separate.
+permissions:
+  contents: read
+
+jobs:
+  spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Pinned rather than @latest: npx would download and run whatever was
+      # published to npm today, in a job that has our checkout.
+      - name: Spec is valid OpenAPI
+        run: npx --yes @redocly/cli@2.51.2 lint spec/graphsolve-v1.json
+      - name: Spec carries no internal references
+        run: |
+          # Backstop only. The real check runs in the engine before the spec is
+          # pushed here — once it lands in a public repo it is in the history
+          # for good. See MAINTAINING.md.
+          if grep -nE '[a-z_]+::[a-z_]+|[0-9]{12}|\.amazonaws\.com|chatbot|\bcrates?\b' spec/graphsolve-v1.json; then
+            echo "::error::internal reference found in the published spec"
+            exit 1
+          fi
+          echo "clean"
+      # The private-name check does not run here. The list itself names
+      # customers and internal systems, so .github/private-names.txt is
+      # untracked and exists only in local checkouts. scripts/audit-public.sh
+      # runs it over the spec and the prose; run that before pushing.
+      - name: Every package ships the licence
+        run: |
+          # A missing or divergent copy is invisible until someone reads the
+          # published artefact, by which time the version is immutable.
+          for dir in . python typescript rust; do
+            diff -q LICENSE "$dir/LICENSE" || {
+              echo "::error::$dir/LICENSE differs from the root LICENSE"
+              exit 1
+            }
+          done
+          grep -q 'Apache License' LICENSE
+          echo "clean"
+
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check src tests
+      - name: Contract tests
+        run: pytest tests -q
+
+  typescript:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Contract tests
+        run: npm test
+      # We publish the build output, not the source, so build it here too.
+      - name: Build
+        run: npm run build
+
+  rust:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rust
+      - name: Format
+        run: cargo fmt -- --check
+      - name: Lint
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      # Library consumers use default-features = false to drop clap, so check
+      # that configuration builds too.
+      - name: Lint without the CLI
+        run: cargo clippy --no-default-features -- -D warnings
+      - name: Contract tests
+        run: cargo test --all-features
+      - name: Docs
+        run: cargo doc --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  # The `rust` job above runs on stable, so it passes whatever `rust-version`
+  # says. This one holds that number honest: it is set by the locked dependency
+  # tree, not by the crate's own syntax.
+  msrv:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read rust-version from the manifest
+        id: msrv
+        run: |
+          version=$(grep -m1 '^rust-version' Cargo.toml | tr -d '"' | awk '{print $3}')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "declared MSRV: $version"
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: rust
+      # --locked, because the MSRV is a property of the committed lockfile. A
+      # resolver free to pick older dependencies would prove nothing.
+      - name: Builds on the declared MSRV
+        run: cargo build --locked --all-features
+
+  generated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      # emit_rust.py runs rustfmt on its output.
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1
+        with:
+          toolchain: stable
+          components: rustfmt
+      # Re-run the emitters and fail if the committed clients differ, so a spec
+      # bump cannot land without the clients being regenerated.
+      - name: Clients match the spec
+        run: |
+          python emit/emit_python.py
+          python emit/emit_typescript.py
+          python emit/emit_rust.py
+          git diff --exit-code \
+            python/src/graphsolve/_generated.py \
+            typescript/src/generated.ts \
+            rust/src/generated.rs \
+            || { echo "::error::re-run the emitters in emit/ and commit the result"; exit 1; }
+
+  # Check every client claims the same major.minor as the spec.
+  versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python scripts/check_versions.py

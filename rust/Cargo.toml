@@ -1,0 +1,47 @@
+[package]
+name = "graphsolve"
+version = "1.0.34"
+edition = "2021"
+# Set by the locked dependency tree rather than by this crate's own syntax: the
+# icu_* crates reached through reqwest's idna require 1.88. CI pins a toolchain
+# to this value, because the stable job would pass whatever it says.
+rust-version = "1.88"
+license = "Apache-2.0"
+description = "Client and CLI for the GraphSolve engine API: production-network solving, PVT/EOS, flow assurance and transient multiphase flow."
+homepage = "https://graphsolve.ai"
+repository = "https://github.com/DataInsightsAI/graphsolve-sdk"
+readme = "README.md"
+keywords = ["petroleum", "reservoir", "pvt", "multiphase", "production"]
+categories = ["api-bindings", "science", "command-line-utilities"]
+# The contract tests read ../../spec/graphsolve-v1.json, which belongs to the
+# repository rather than the crate. Shipping a test that cannot compile is worse
+# than not shipping it; the publish workflow runs them from the repo first.
+exclude = ["tests"]
+
+[dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["v4"] }
+rand = "0.9"
+tokio = { version = "1", features = ["time"] }
+
+# CLI only.
+anyhow = { version = "1", optional = true }
+clap = { version = "4", features = ["derive", "env"], optional = true }
+
+[features]
+# The CLI is on by default so `cargo install graphsolve` just works — it is the
+# artifact most of the user base will actually reach for. Depending on this as a
+# library? `default-features = false` drops clap and anyhow from your tree.
+default = ["cli"]
+cli = ["dep:anyhow", "dep:clap", "tokio/rt-multi-thread", "tokio/macros", "tokio/io-std"]
+
+[[bin]]
+name = "graphsolve"
+required-features = ["cli"]
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+wiremock = "0.6"
