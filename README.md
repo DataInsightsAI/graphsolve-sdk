@@ -83,27 +83,3 @@ Every client implements the same behavioural contract regardless of language.
 See [CONTRIBUTING.md](CONTRIBUTING.md) before adding or changing one, and
 [MAINTAINING.md](MAINTAINING.md) for how the spec gets here, how releases work,
 and why no workflow in this repository holds a secret.
-
-## Before this repository goes public
-
-- [ ] Claim `graphsolve` on PyPI, npm and crates.io, and the `@graphsolve` npm
-      scope. All four were free as of 2026-09-09; crates.io names cannot be
-      reclaimed.
-- [ ] Configure trusted publishing on all three registries — each needs this
-      repository, the workflow filename and the environment name registered on
-      its side. No tokens are stored here. Note npm and crates.io cannot be
-      configured until the package exists, so those two need one manual publish
-      from a laptop first; PyPI supports a pending publisher and does not. See
-      [MAINTAINING.md](MAINTAINING.md#the-first-publish-of-each-package-is-the-exception).
-- [ ] Set **required reviewers** on the `pypi`, `npm` and `crates-io` GitHub
-      environments. That, not the workflow file, is what stops a tag push from
-      publishing unattended.
-- [ ] Decide whether to automate the spec hand-off from the engine's release
-      workflow, and with what credential — see
-      [MAINTAINING.md](MAINTAINING.md#automating-it-when-it-becomes-a-chore).
-      `scripts/sync-spec.sh` covers it by hand until then, with no credential
-      in either direction.
-- [ ] Decide whether the spec should keep advertising the development server.
-      `scripts/audit-public.sh` greps the spec and the prose for private names,
-      but `api-dev.graphsolve.ai` is a deliberate entry in the spec's `servers`
-      list, not an accident, so no check will remove it for you.
