@@ -244,6 +244,8 @@
           "Mukherjee-Brill",
           "Poettmann-Carpenter",
           "Default",
+          "QC-high",
+          "QC-low",
           "SinglePhaseGas",
           "SUPREME"
         ],
@@ -3779,16 +3781,28 @@
                 "pi well": {
                   "value": {
                     "ipr": {
+                      "fluid": {
+                        "dissolved_gas_ratio": 70.0,
+                        "fluid_type": "oil",
+                        "oil_viscosity_correlation": "beggs",
+                        "reference_gas_mw": 19.83,
+                        "reference_oil_density": 815.0,
+                        "saturation_pressure_correlation": "standing"
+                      },
+                      "inflow_model_id": "well-1",
                       "ipr_model": "pi",
+                      "reservoir_pressure": 35.85,
                       "reservoir_properties": {
-                        "productivity_index": 1.0
-                      }
+                        "productivity_index": 115.3
+                      },
+                      "reservoir_temperature": 394.26,
+                      "watercut": 10.0
                     },
                     "tubing_diameter": 0.1,
-                    "tubing_length": 2000.0,
-                    "tubing_roughness": 0.0001,
+                    "tubing_length": 2500.0,
+                    "tubing_roughness": 0.000045,
                     "wellhead_pressure": 2.0,
-                    "wellhead_temperature": 320.0
+                    "wellhead_temperature": 330.0
                   }
                 }
               },
@@ -3803,7 +3817,7 @@
                     ]
                   },
                   "flow_correlation": {
-                    "description": "Multiphase flow correlation (default: \"Beggs-Brill\")",
+                    "description": "Multiphase flow correlation (default: \"KISS\"). Accepts any name\nlist_correlations returns for category \"flow\".",
                     "type": [
                       "string",
                       "null"
@@ -4152,7 +4166,7 @@
                     ]
                   },
                   "flow_correlation": {
-                    "description": "Multiphase flow correlation: \"Griffith-Wallis\", \"KISS\", \"Mukherjee-Brill\", \"Hage-Brown\", \"Beggs-Brill\"",
+                    "description": "Multiphase flow correlation (default: \"Beggs-Brill\"). Accepts any name\nlist_correlations returns for category \"flow\".",
                     "type": [
                       "string",
                       "null"
@@ -6331,7 +6345,7 @@
                 "description": "Input for the multi-segment pipeline correlation comparison.",
                 "properties": {
                   "correlations": {
-                    "description": "Optional subset of correlations to compare. Default: all 19 variants\nin the FlowCorrelation enum.",
+                    "description": "Optional subset of correlations to compare. Default: every correlation.",
                     "items": {
                       "$ref": "#/components/schemas/FlowCorrelationName"
                     },
@@ -6478,7 +6492,7 @@
                     "type": "number"
                   },
                   "correlations": {
-                    "description": "Optional subset of correlations. Default: all 19 variants.",
+                    "description": "Optional subset of correlations. Default: every correlation.",
                     "items": {
                       "type": "string"
                     },

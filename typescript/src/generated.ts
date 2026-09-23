@@ -131,6 +131,8 @@ export type FlowCorrelationName =
   | "Mukherjee-Brill"
   | "Poettmann-Carpenter"
   | "Default"
+  | "QC-high"
+  | "QC-low"
   | "SinglePhaseGas"
   | "SUPREME";
 

@@ -169,6 +169,10 @@ pub enum FlowCorrelationName {
     #[default]
     #[serde(rename = "Default")]
     Default,
+    #[serde(rename = "QC-high")]
+    QcHigh,
+    #[serde(rename = "QC-low")]
+    QcLow,
     #[serde(rename = "SinglePhaseGas")]
     SinglePhaseGas,
     #[serde(rename = "SUPREME")]
@@ -612,7 +616,8 @@ pub struct CalculateNodalAnalysisParams {
     /// Dissolved gas-oil ratio in Sm3/Sm3
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dissolved_gas_ratio: Option<f64>,
-    /// Multiphase flow correlation (default: "Beggs-Brill")
+    /// Multiphase flow correlation (default: "KISS"). Accepts any name
+    /// list_correlations returns for category "flow".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flow_correlation: Option<String>,
     /// Gas molecular weight in g/mol
@@ -685,8 +690,8 @@ pub struct CalculatePipeTraverseParams {
     /// Flow boundary location: "top" or "bottom" (default: "top")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flow_boundary: Option<String>,
-    /// Multiphase flow correlation: "Griffith-Wallis", "KISS", "Mukherjee-Brill",
-    /// "Hage-Brown", "Beggs-Brill"
+    /// Multiphase flow correlation (default: "Beggs-Brill"). Accepts any name
+    /// list_correlations returns for category "flow".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flow_correlation: Option<String>,
     /// Gas molecular weight in g/mol
@@ -1029,8 +1034,7 @@ pub struct ComparePipelineCorrelationsParams {
     /// surrounding_temperature, heat_transfer_coefficient, pipe_length, pipe_angle
     /// and optional MD/TVD.
     pub pipe_segments: serde_json::Value,
-    /// Optional subset of correlations to compare. Default: all 19 variants in the
-    /// FlowCorrelation enum.
+    /// Optional subset of correlations to compare. Default: every correlation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correlations: Option<Vec<FlowCorrelationName>>,
 }
@@ -1055,7 +1059,7 @@ pub struct ComparePressureDropCorrelationsParams {
     pub velocity: Vec<f64>,
     /// Viscosities \[gas, oil, water\] in Pa.s
     pub viscosity: Vec<f64>,
-    /// Optional subset of correlations. Default: all 19 variants.
+    /// Optional subset of correlations. Default: every correlation.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub correlations: Option<Vec<String>>,
 }

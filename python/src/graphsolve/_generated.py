@@ -663,7 +663,7 @@ class GeneratedMethods:
         self,
         *,
         angle: float,
-        correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "SinglePhaseGas", "SUPREME"],
+        correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"],
         density: list[float],
         diameter: float,
         ift: float,
@@ -1031,7 +1031,7 @@ class GeneratedMethods:
         fluid: Any,
         inlet: dict[str, Any],
         pipe_segments: Any,
-        correlations: list[Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "SinglePhaseGas", "SUPREME"]] | None = None,
+        correlations: list[Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"]] | None = None,
     ) -> dict[str, Any]:
         """Walk a multi-segment pipe with each correlation and compare the predicted
         outlet pressure.
