@@ -657,7 +657,7 @@
       "name": "Proprietary"
     },
     "title": "GraphSolve Engine API",
-    "version": "1.0.34"
+    "version": "1.0.35"
   },
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "openapi": "3.1.0",
@@ -4110,7 +4110,7 @@
           "content": {
             "application/json": {
               "examples": {
-                "1 km vertical": {
+                "1 km horizontal": {
                   "value": {
                     "angle": 90.0,
                     "diameter": 0.1,
@@ -4127,7 +4127,7 @@
               "schema": {
                 "properties": {
                   "angle": {
-                    "description": "Pipe angle from vertical in degrees (0=vertical down, 90=horizontal, 180=vertical up)",
+                    "description": "Pipe angle from vertical in degrees, measured from the bottom end to the top end\n(0=vertical, 90=horizontal). Flow enters at `flow_boundary`: with the default \"top\",\n0 is vertical downflow and 180 vertical upflow; with \"bottom\", 0 is vertical upflow.",
                     "format": "double",
                     "type": "number"
                   },
@@ -4340,7 +4340,7 @@
           "content": {
             "application/json": {
               "examples": {
-                "vertical Beggs-Brill": {
+                "horizontal Beggs-Brill": {
                   "value": {
                     "angle": 90.0,
                     "correlation": "Beggs-Brill",
@@ -4370,7 +4370,7 @@
                 "additionalProperties": false,
                 "properties": {
                   "angle": {
-                    "description": "Pipe angle from vertical in degrees (0=vertical down, 90=horizontal, 180=vertical up)",
+                    "description": "Pipe angle from vertical in degrees, in the flow direction (0=vertical upflow,\n90=horizontal, 180=vertical downflow)",
                     "format": "double",
                     "type": "number"
                   },
@@ -6473,7 +6473,7 @@
                 "additionalProperties": false,
                 "properties": {
                   "angle": {
-                    "description": "Pipe angle from vertical in degrees",
+                    "description": "Pipe angle from vertical in degrees, in the flow direction (0=vertical upflow,\n90=horizontal, 180=vertical downflow)",
                     "format": "double",
                     "type": "number"
                   },

@@ -4,7 +4,7 @@
 //! Run `python emit/emit_rust.py` after a spec change; CI fails if this
 //! file and the spec disagree.
 //!
-//! Engine API version: 1.0.34
+//! Engine API version: 1.0.35
 //! Tools: 89
 
 use serde::{Deserialize, Serialize};
@@ -658,8 +658,10 @@ pub struct CalculatePhaseCutsParams {
 /// Arguments for [`GraphSolve::calculate_pipe_traverse`](crate::GraphSolve::calculate_pipe_traverse).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculatePipeTraverseParams {
-    /// Pipe angle from vertical in degrees (0=vertical down, 90=horizontal,
-    /// 180=vertical up)
+    /// Pipe angle from vertical in degrees, measured from the bottom end to the top
+    /// end (0=vertical, 90=horizontal). Flow enters at `flow_boundary`: with the
+    /// default "top", 0 is vertical downflow and 180 vertical upflow; with
+    /// "bottom", 0 is vertical upflow.
     pub angle: f64,
     /// Pipe inner diameter in meters
     pub diameter: f64,
@@ -710,8 +712,8 @@ pub struct CalculatePipeTraverseParams {
 /// Arguments for [`GraphSolve::calculate_pressure_drop`](crate::GraphSolve::calculate_pressure_drop).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculatePressureDropParams {
-    /// Pipe angle from vertical in degrees (0=vertical down, 90=horizontal,
-    /// 180=vertical up)
+    /// Pipe angle from vertical in degrees, in the flow direction (0=vertical
+    /// upflow, 90=horizontal, 180=vertical downflow)
     pub angle: f64,
     /// Multiphase flow correlation (e.g. "Beggs-Brill", "Griffith-Wallis", "KISS").
     pub correlation: FlowCorrelationName,
@@ -1036,7 +1038,8 @@ pub struct ComparePipelineCorrelationsParams {
 /// Arguments for [`GraphSolve::compare_pressure_drop_correlations`](crate::GraphSolve::compare_pressure_drop_correlations).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct ComparePressureDropCorrelationsParams {
-    /// Pipe angle from vertical in degrees
+    /// Pipe angle from vertical in degrees, in the flow direction (0=vertical
+    /// upflow, 90=horizontal, 180=vertical downflow)
     pub angle: f64,
     /// Densities \[gas, oil, water\] in kg/m3
     pub density: Vec<f64>,

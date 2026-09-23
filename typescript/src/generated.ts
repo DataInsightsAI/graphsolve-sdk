@@ -5,7 +5,7 @@
  * Run `python emit/emit_typescript.py` after a spec change; CI fails if
  * this file and the spec disagree.
  *
- * Engine API version: 1.0.34
+ * Engine API version: 1.0.35
  * Tools: 89
  */
 
