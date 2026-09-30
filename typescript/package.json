@@ -1,6 +1,6 @@
 {
   "name": "@graphsolve/sdk",
-  "version": "1.0.34",
+  "version": "1.0.40",
   "description": "Client for the GraphSolve engine API: production-network solving, PVT/EOS, flow assurance and transient multiphase flow.",
   "license": "Apache-2.0",
   "author": "Data Insights AI",

@@ -506,7 +506,7 @@ describe("the generated surface", () => {
     const methods = GeneratedMethods.prototype as unknown as Record<string, unknown>;
     const missing = tools.filter((tool) => typeof methods[tool] !== "function");
     expect(missing).toEqual([]);
-    expect(tools).toHaveLength(89);
+    expect(tools).toHaveLength(98);
   });
 
   it("forwards to the named tool", async () => {

@@ -5,8 +5,8 @@
  * Run `python emit/emit_typescript.py` after a spec change; CI fails if
  * this file and the spec disagree.
  *
- * Engine API version: 1.0.34
- * Tools: 89
+ * Engine API version: 1.0.40
+ * Tools: 98
  */
 
 import type { ToolArguments, ToolResponse } from "./types.js";
@@ -23,6 +23,7 @@ export type ToolName =
   | "calculate_choke_size"
   | "calculate_compressor"
   | "calculate_corrosion_rate"
+  | "calculate_critical_point"
   | "calculate_erosional_velocity"
   | "calculate_fluid_properties"
   | "calculate_gas_dew_point"
@@ -37,6 +38,7 @@ export type ToolName =
   | "calculate_phase_cuts"
   | "calculate_pipe_traverse"
   | "calculate_pressure_drop"
+  | "calculate_pump"
   | "calculate_pump_head"
   | "calculate_rate_from_choke"
   | "calculate_reciprocating_compressor"
@@ -61,6 +63,7 @@ export type ToolName =
   | "generate_samples"
   | "generate_type_curve"
   | "get_eos_component"
+  | "import_prp_fluid"
   | "list_correlations"
   | "list_edge_types"
   | "list_eos_binary_interactions"
@@ -76,16 +79,21 @@ export type ToolName =
   | "match_pvt"
   | "match_skin"
   | "optimise_network"
+  | "partition_acid_gas_in_water"
   | "rta_diagnostics"
   | "run_cce"
   | "run_cvd"
   | "run_dle"
   | "run_eos_flash"
   | "run_forecast"
+  | "run_gas_depletion"
   | "run_material_balance"
+  | "run_mmp_probe"
   | "run_molecule_tracking"
+  | "run_nodal_study"
   | "run_parametric_study"
   | "run_process_graph"
+  | "run_pvt_regression_suite"
   | "run_separator_test"
   | "run_swelling_test"
   | "run_transient_field"
@@ -94,6 +102,7 @@ export type ToolName =
   | "screen_asphaltene_risk"
   | "screen_hydrate_risk"
   | "screen_liquid_loading"
+  | "screen_scale_risk"
   | "screen_wax_risk"
   | "solve_network"
   | "solve_network_map"
@@ -110,8 +119,29 @@ export type CorrosionModelName =
 
 export type EosModelName =
   | "PengRobinson"
+  | "SoaveRedlichKwong";
+
+export type EosViscosityModelName =
+  | "auto"
+  | "lucas"
+  | "lbc"
+  | "wilke"
+  | "herning_zipperer"
+  | "chapman_enskog"
+  | "pedersen"
+  | "trapp"
+  | "expanded_fluid"
+  | "burgoyne_nielsen_stanko";
+
+export type FlashEosModelName =
+  | "PengRobinson"
   | "SoaveRedlichKwong"
-  | "PatelTeja";
+  | "Gerg2008";
+
+export type FlashTypeName =
+  | "pt"
+  | "ph"
+  | "ps";
 
 export type FlowCorrelationName =
   | "Aziz"
@@ -131,8 +161,16 @@ export type FlowCorrelationName =
   | "Mukherjee-Brill"
   | "Poettmann-Carpenter"
   | "Default"
+  | "QC-high"
+  | "QC-low"
   | "SinglePhaseGas"
   | "SUPREME";
+
+export type HeaterCoolerModeName =
+  | "fixed_duty"
+  | "fixed_outlet_temperature"
+  | "approach_temperature"
+  | "ua";
 
 export type HydrateModelName =
   | "towler_mokhatab"
@@ -146,9 +184,61 @@ export type InhibitorName =
   | "deg"
   | "teg";
 
+export type MatchTargetName =
+  | "productivity_index"
+  | "skin"
+  | "forchheimer_ab"
+  | "fetkovich_ab";
+
+export type PipeEnd =
+  | "top"
+  | "bottom";
+
+export type PseudoCriticalMethodName =
+  | "kesler_lee"
+  | "twu"
+  | "sancet";
+
+export type SaturationAlgorithmName =
+  | "classical"
+  | "bell_jaeger"
+  | "multi_start"
+  | "envelope";
+
+export type SaturationBoundaryName =
+  | "bubble"
+  | "dew";
+
+export type ScaleMineralName =
+  | "calcite"
+  | "aragonite"
+  | "siderite"
+  | "barite"
+  | "celestite"
+  | "gypsum"
+  | "anhydrite"
+  | "halite";
+
+export type SlipModelName =
+  | "no_slip"
+  | "gromles"
+  | "hydro"
+  | "constant_slip"
+  | "fauske"
+  | "moddy"
+  | "simpson"
+  | "thom"
+  | "baroczy"
+  | "lockhart_martenelli";
+
+export type WaxActivityModelName =
+  | "regular_solution"
+  | "ideal";
+
 export type WaxModelName =
   | "screening"
-  | "won";
+  | "won"
+  | "sle";
 
 export type AdjustCompositionToGorParams = {
   mole_fractions: number[];
@@ -157,6 +247,8 @@ export type AdjustCompositionToGorParams = {
   component_names?: string[] | null;
   components?: Record<string, unknown>[] | null;
   eos_model?: EosModelName | null;
+  separator_pressures_mpa?: number[] | null;
+  separator_temperatures_k?: number[] | null;
 };
 
 export type AdjustCompositionToPhaseRatioParams = {
@@ -193,10 +285,13 @@ export type CalculateChokePressureDropParams = {
   inlet_temperature: number;
   oil_rate: number;
   water_rate: number;
+  discharge_coefficient?: number | null;
   dissolved_gas_ratio?: number | null;
   gas_mw?: number | null;
   oil_density?: number | null;
-  slip_model?: string | null;
+  perry_multiplier?: number | null;
+  pipe_diameter_ratio?: number | null;
+  slip_model?: SlipModelName | null;
   water_salinity?: number | null;
 };
 
@@ -207,10 +302,13 @@ export type CalculateChokeSizeParams = {
   upstream_pressure: number;
   upstream_temperature: number;
   water_rate: number;
+  discharge_coefficient?: number | null;
   dissolved_gor?: number | null;
   gas_mw?: number | null;
   oil_density?: number | null;
-  slip_model?: string | null;
+  perry_multiplier?: number | null;
+  pipe_diameter_ratio?: number | null;
+  slip_model?: SlipModelName | null;
   water_salinity?: number | null;
 };
 
@@ -243,6 +341,14 @@ export type CalculateCorrosionRateParams = {
   shear_stress_pa?: number | null;
 };
 
+export type CalculateCriticalPointParams = {
+  mole_fractions: number[];
+  binary_interactions?: Record<string, unknown>[] | null;
+  component_names?: string[] | null;
+  components?: Record<string, unknown>[] | null;
+  eos_model?: EosModelName | null;
+};
+
 export type CalculateErosionalVelocityParams = {
   fluid: Record<string, unknown>;
   pipe_diameter: number;
@@ -258,7 +364,7 @@ export type CalculateFluidPropertiesParams = {
 };
 
 export type CalculateGasDewPointParams = {
-  condensate_gas_ratio: number;
+  condensate_gas_ratio_stb_per_mmscf: number;
   gas_gravity: number;
   oil_api_gravity: number;
   temperature: number;
@@ -268,12 +374,14 @@ export type CalculateHeaterCoolerParams = {
   fluid: Record<string, unknown>;
   inlet_pressure: number;
   inlet_temperature: number;
-  mode: string;
+  mode: HeaterCoolerModeName;
   approach_temperature?: number | null;
-  duty?: number | null;
+  heat_duty?: number | null;
+  max_duty?: number | null;
+  outlet_temperature?: number | null;
   pressure_drop?: number | null;
-  reference_temperature?: number | null;
-  target_temperature?: number | null;
+  ua?: number | null;
+  utility_temperature?: number | null;
 };
 
 export type CalculateHydrateTemperatureParams = {
@@ -323,7 +431,7 @@ export type CalculateNodalAnalysisParams = {
   wellhead_pressure: number;
   wellhead_temperature: number;
   dissolved_gas_ratio?: number | null;
-  flow_correlation?: string | null;
+  flow_correlation?: FlowCorrelationName | null;
   gas_mw?: number | null;
   oil_density?: number | null;
   tubing_angle?: number | null;
@@ -350,12 +458,12 @@ export type CalculatePipeTraverseParams = {
   roughness: number;
   water_rate: number;
   dissolved_gas_ratio?: number | null;
-  flow_boundary?: string | null;
-  flow_correlation?: string | null;
+  flow_boundary?: PipeEnd | null;
+  flow_correlation?: FlowCorrelationName | null;
   gas_mw?: number | null;
   heat_transfer_coefficient?: number | null;
   oil_density?: number | null;
-  pressure_boundary?: string | null;
+  pressure_boundary?: PipeEnd | null;
   surrounding_temperature?: number | null;
   water_salinity?: number | null;
 };
@@ -372,6 +480,19 @@ export type CalculatePressureDropParams = {
   viscosity: number[];
 };
 
+export type CalculatePumpParams = {
+  fluid: Record<string, unknown>;
+  inlet_pressure: number;
+  inlet_temperature: number;
+  centrifugal?: Record<string, unknown> | null;
+  efficiency?: number | null;
+  head_curve?: number[][];
+  mechanical_efficiency?: number | null;
+  minor_loss_coefficient?: number | null;
+  nozzle_diameter?: number | null;
+  npsh_required?: number | null;
+};
+
 export type CalculatePumpHeadParams = {
   flow_rate: number;
   head_curve: number[][];
@@ -386,6 +507,7 @@ export type CalculateRateFromChokeParams = {
   upstream_pressure: number;
   upstream_temperature: number;
   cgr?: number | null;
+  discharge_coefficient?: number | null;
   dissolved_gor?: number | null;
   fixed?: string | null;
   free_gas_rate?: number | null;
@@ -393,7 +515,9 @@ export type CalculateRateFromChokeParams = {
   gor?: number | null;
   oil_density?: number | null;
   oil_rate?: number | null;
-  slip_model?: string | null;
+  perry_multiplier?: number | null;
+  pipe_diameter_ratio?: number | null;
+  slip_model?: SlipModelName | null;
   target_downstream_temperature?: number | null;
   water_rate?: number | null;
   water_salinity?: number | null;
@@ -427,11 +551,15 @@ export type CalculateReidVapourPressureParams = {
 };
 
 export type CalculateSaturationPressureParams = {
-  component_names: string[];
   mole_fractions: number[];
-  temperature_k: number;
-  boundary?: string | null;
-  eos_model?: string | null;
+  algorithm?: SaturationAlgorithmName | null;
+  binary_interactions?: Record<string, unknown>[] | null;
+  boundary?: SaturationBoundaryName | null;
+  component_names?: string[] | null;
+  components?: Record<string, unknown>[] | null;
+  eos_model?: EosModelName | null;
+  pressure_mpa?: number | null;
+  temperature_k?: number | null;
 };
 
 export type CalculateScrewCompressorParams = {
@@ -484,7 +612,7 @@ export type CalculateWaxDepositionRateParams = {
 
 export type CharacterizePseudoComponentParams = {
   boiling_point?: number | null;
-  method?: string | null;
+  method?: PseudoCriticalMethodName | null;
   molecular_weight?: number | null;
   specific_gravity?: number | null;
 };
@@ -494,6 +622,11 @@ export type ComparePipelineCorrelationsParams = {
   inlet: Record<string, unknown>;
   pipe_segments: unknown;
   correlations?: FlowCorrelationName[] | null;
+  reference_measured_depth?: number | null;
+  reference_true_vertical_depth?: number | null;
+  reference_x?: number | null;
+  reference_y?: number | null;
+  reference_z?: number | null;
 };
 
 export type ComparePressureDropCorrelationsParams = {
@@ -505,7 +638,7 @@ export type ComparePressureDropCorrelationsParams = {
   roughness: number;
   velocity: number[];
   viscosity: number[];
-  correlations?: string[] | null;
+  correlations?: FlowCorrelationName[] | null;
 };
 
 export type ComputeStatisticsParams = {
@@ -543,6 +676,8 @@ export type FlashToSurfaceParams = {
   component_names?: string[] | null;
   components?: Record<string, unknown>[] | null;
   eos_model?: EosModelName | null;
+  separator_pressures_mpa?: number[] | null;
+  separator_temperatures_k?: number[] | null;
 };
 
 export type GenerateDeclineParams = {
@@ -555,9 +690,11 @@ export type GenerateIprCurveParams = {
 };
 
 export type GeneratePhaseEnvelopeParams = {
-  component_names: string[];
   mole_fractions: number[];
-  eos_model?: string | null;
+  binary_interactions?: Record<string, unknown>[] | null;
+  component_names?: string[] | null;
+  components?: Record<string, unknown>[] | null;
+  eos_model?: EosModelName | null;
 };
 
 export type GenerateSamplesParams = {
@@ -573,6 +710,10 @@ export type GenerateTypeCurveParams = {
 
 export type GetEosComponentParams = {
   name: string;
+};
+
+export type ImportPrpFluidParams = {
+  prp_text: string;
 };
 
 export type ListCorrelationsParams = {
@@ -593,7 +734,7 @@ export type MatchForchheimerAbParams = {
 
 export type MatchParametersParams = {
   inflow_model: unknown;
-  match_target?: string | null;
+  match_target?: MatchTargetName | null;
 };
 
 export type MatchProductivityIndexParams = {
@@ -610,6 +751,20 @@ export type MatchSkinParams = {
 
 export type OptimiseNetworkParams = {
   optimisation_json: Record<string, unknown> | unknown[] | string;
+};
+
+export type PartitionAcidGasInWaterParams = {
+  pressure: number;
+  temperature: number;
+  water_analysis: Record<string, unknown>;
+  co2_fugacity_bar?: number | null;
+  co2_mass_rate?: number | null;
+  co2_mole_fraction?: number | null;
+  h2s_fugacity_bar?: number | null;
+  h2s_mass_rate?: number | null;
+  h2s_mole_fraction?: number | null;
+  ph?: number | null;
+  water_mass_rate?: number | null;
 };
 
 export type RtaDiagnosticsParams = {
@@ -631,24 +786,42 @@ export type RunDleParams = {
 export type RunEosFlashParams = {
   mole_fractions: number[];
   pressure_mpa: number;
-  temperature_k: number;
   binary_interactions?: Record<string, unknown>[] | null;
   component_names?: string[] | null;
   components?: Record<string, unknown>[] | null;
-  eos_model?: EosModelName | null;
+  enthalpy_j_per_mol?: number | null;
+  entropy_j_per_mol_k?: number | null;
+  eos_model?: FlashEosModelName | null;
+  flash_type?: FlashTypeName | null;
+  gas_viscosity_model?: EosViscosityModelName | null;
+  include_properties?: boolean | null;
+  liquid_viscosity_model?: EosViscosityModelName | null;
+  temperature_k?: number | null;
 };
 
 export type RunForecastParams = {
   forecast_json: Record<string, unknown> | unknown[] | string;
 };
 
+export type RunGasDepletionParams = {
+  experiment_json: Record<string, unknown> | unknown[] | string;
+};
+
 export type RunMaterialBalanceParams = {
   reservoir_json: Record<string, unknown> | unknown[] | string;
+};
+
+export type RunMmpProbeParams = {
+  experiment_json: Record<string, unknown> | unknown[] | string;
 };
 
 export type RunMoleculeTrackingParams = {
   fluids_json: Record<string, unknown> | unknown[] | string;
   solved_network_json: Record<string, unknown> | unknown[] | string;
+};
+
+export type RunNodalStudyParams = {
+  nodal_json: Record<string, unknown> | unknown[] | string;
 };
 
 export type RunParametricStudyParams = {
@@ -657,6 +830,10 @@ export type RunParametricStudyParams = {
 
 export type RunProcessGraphParams = {
   process_graph_json: Record<string, unknown> | unknown[] | string;
+};
+
+export type RunPvtRegressionSuiteParams = {
+  experiment_json: Record<string, unknown> | unknown[] | string;
 };
 
 export type RunSeparatorTestParams = {
@@ -704,14 +881,38 @@ export type ScreenLiquidLoadingParams = {
   surface_tension: number;
 };
 
+export type ScreenScaleRiskParams = {
+  pressure: number;
+  temperature: number;
+  water_analysis: Record<string, unknown>;
+  co2_fugacity_bar?: number | null;
+  co2_mole_fraction?: number | null;
+  h2s_fugacity_bar?: number | null;
+  h2s_mole_fraction?: number | null;
+  minerals?: ScaleMineralName[] | null;
+  ph?: number | null;
+  water_mass_rate?: number | null;
+};
+
 export type ScreenWaxRiskParams = {
   temperature: number;
+  activity_model?: WaxActivityModelName | null;
+  component_names?: string[] | null;
   density_c7_plus?: number | null;
+  enthalpies_of_fusion?: number[] | null;
+  enthalpies_of_transition?: number[] | null;
+  heat_capacity_correction?: boolean | null;
+  heat_capacity_of_fusion_j_per_mol_k?: number[] | null;
+  liquid_molar_volume_cm3_per_mol?: number[] | null;
+  liquid_solubility_parameter_mpa_half?: number[] | null;
+  melting_points?: number[] | null;
   model?: WaxModelName | null;
   mole_fractions?: number[] | null;
   molecular_weights?: number[] | null;
   mw_c7_plus?: number | null;
   paraffin_mass_fraction?: number | null;
+  solid_molar_volume_ratio?: number | null;
+  transition_temperatures?: number[] | null;
   watson_k?: number | null;
   wax_former_mask?: boolean[] | null;
 };
@@ -769,7 +970,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Tune a composition to a target in-situ GOR (m3/m3) at given P/T.
+   * Tune a composition to a target in-situ gas-oil volume ratio (m3/m3) at
+   * given P/T.
    *
    * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
    */
@@ -791,9 +993,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Source-tagged production allocation (back-allocation): attribute
-   * commingled rates back to each tagged source, including lift-gas
-   * accounting.
+   * Source-tagged production allocation (back-allocation): solve the network
+   * and attribute the mass on every edge back to the sources it came from.
    *
    * Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
    */
@@ -875,8 +1076,21 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * API RP 14E erosional velocity limit and the actual mixture velocity for
-   * a pipe.
+   * True critical point of a mixture (Heidemann-Khalil) with a cubic EOS:
+   * critical temperature, pressure, molar volume and Z-factor.
+   *
+   * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+   */
+  calculate_critical_point(
+    params: CalculateCriticalPointParams,
+  ): Promise<ToolResponse> {
+    return this.call("calculate_critical_point", params);
+  }
+
+  /**
+   * API RP 14E erosional velocity limit (1.22 C / sqrt(rho_mix) in SI), the
+   * actual mixture velocity for a pipe, and the flow at which the pipe
+   * reaches the limit.
    *
    * Costs 1 credit.
    */
@@ -911,8 +1125,9 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Heater/cooler in fixed_duty, fixed_temperature, or approach_temperature
-   * mode; returns outlet P/T and duty.
+   * Heater/cooler on the network edge's energy balance, in fixed_duty,
+   * fixed_outlet_temperature, approach_temperature or ua mode; returns
+   * outlet P/T and duty.
    *
    * Costs 1 credit.
    */
@@ -923,8 +1138,9 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Hydrate formation temperature at a given pressure (Baillie-Wichert) with
-   * sour-gas corrections.
+   * Hydrate formation temperature at a given pressure and gas gravity from
+   * the Towler-Mokhatab screening correlation; H2S and CO2 inputs are
+   * echoed, not applied.
    *
    * Costs 1 credit.
    */
@@ -967,8 +1183,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Multiphase-flow-meter allocation: distribute measured rates among
-   * streams (in-situ -> standard conditions).
+   * Multiphase-flow-meter allocation: convert one meter reading (in-situ) to
+   * standard-condition rates with an EOS.
    *
    * Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
    */
@@ -992,8 +1208,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Operating point = IPR intersect VLP. Generates both curves and finds the
-   * stabilised rate and flowing BHP.
+   * Operating point = IPR intersect VLP for one well and one tubing run.
+   * Generates both curves and finds the stabilised rate and flowing BHP.
    *
    * Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
    */
@@ -1016,8 +1232,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * March pressure and temperature along a single pipe (multi-segment) with
-   * heat transfer.
+   * March pressure and temperature along a single straight pipe (one
+   * diameter, length and angle) with heat transfer.
    *
    * Costs 3 credits.
    */
@@ -1028,8 +1244,9 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Multiphase pressure gradient for a single pipe segment using a chosen
-   * correlation. Returns gradient components, holdup and flow regime.
+   * Multiphase pressure gradient at one point in a pipe using a chosen
+   * correlation. Returns gradient components, holdup, flow regime and
+   * hydraulics.
    *
    * Costs 1 credit.
    */
@@ -1040,8 +1257,20 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * ESP/pump outlet pressure from a head-vs-rate performance curve,
-   * interpolated at the operating rate and converted with liquid density.
+   * Centrifugal pump or ESP at one suction state on the network pump model:
+   * discharge P/T, head, power, NPSH, per-section operating range and the
+   * ESP drive train.
+   *
+   * Costs 1 credit.
+   */
+  calculate_pump(params: CalculatePumpParams): Promise<ToolResponse> {
+    return this.call("calculate_pump", params);
+  }
+
+  /**
+   * Single head-curve lookup: discharge pressure from one head-vs-rate curve
+   * read at one flow with one liquid density. No stages, speed, gas or power
+   * model; see calculate_pump.
    *
    * Costs 1 credit.
    */
@@ -1085,8 +1314,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Bubble- or dew-point pressure of a composition at a given temperature
-   * (cubic EOS).
+   * Bubble- or dew-point pressure of a composition at a temperature, or
+   * bubble- or dew-point temperature at a pressure (cubic EOS).
    *
    * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
    */
@@ -1098,8 +1327,8 @@ export abstract class GeneratedMethods {
 
   /**
    * Screw (positive-displacement) compressor closed by black-box
-   * efficiencies; flow set by displacement x shaft speed x volumetric
-   * efficiency.
+   * efficiencies; mass flow = volumetric efficiency x suction density x
+   * displacement per revolution x shaft speed in rev/s.
    *
    * Costs 1 credit.
    */
@@ -1133,8 +1362,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Brine properties (density, viscosity, compressibility, FVF) via IAPWS-95
-   * with a salinity correction.
+   * Brine properties (density, viscosity, compressibility, heat capacity,
+   * enthalpy) with a salinity correction.
    *
    * Costs 1 credit.
    */
@@ -1157,8 +1386,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Critical properties (Tc, Pc, Vc, Watson K) of a pseudo-component from
-   * any two of MW / specific gravity / boiling point.
+   * Critical properties (Tc, Pc, Vc), acentric factor and Watson K of a
+   * pseudo-component from any two of MW / specific gravity / boiling point.
    *
    * Costs 1 credit.
    */
@@ -1238,8 +1467,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Flash a reservoir composition to stock-tank: GOR, API/oil density,
-   * shrinkage.
+   * Flash a composition through a separator train to stock-tank: GOR, oil
+   * density, specific gravity and API gravity, gas gravity.
    *
    * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
    */
@@ -1260,7 +1489,7 @@ export abstract class GeneratedMethods {
 
   /**
    * Inflow performance relationship (IPR) curve for one well; real physics
-   * per point. Required inputs depend on ipr_model.
+   * per point. Required inputs depend on ipr_model (19 models).
    *
    * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
    */
@@ -1270,7 +1499,7 @@ export abstract class GeneratedMethods {
 
   /**
    * Two-phase P-T envelope (dew/bubble locus + critical point) of a
-   * composition (cubic EOS only; not GERG).
+   * composition (Peng-Robinson or SRK).
    *
    * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
    */
@@ -1294,7 +1523,8 @@ export abstract class GeneratedMethods {
 
   /**
    * Dimensionless transient type-curve surface (pD/qD, Bourdet derivative)
-   * for a transient ipr_model.
+   * for a transient ipr_model, with the dimensionless groups derived from
+   * the geometry.
    *
    * Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
    */
@@ -1303,13 +1533,23 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Critical properties (Tc, Pc, omega, MW) of a single EOS component by
-   * name.
+   * Critical properties (Tc, Pc in MPa, omega, MW) of a single EOS component
+   * by database name or short code.
    *
    * Free.
    */
   get_eos_component(params: GetEosComponentParams): Promise<ToolResponse> {
     return this.call("get_eos_component", params);
+  }
+
+  /**
+   * Import a PVTsim .prp fluid file (text) as a composition for the PVT,
+   * process-graph and MPFM tools.
+   *
+   * Costs 1 credit.
+   */
+  import_prp_fluid(params: ImportPrpFluidParams): Promise<ToolResponse> {
+    return this.call("import_prp_fluid", params);
   }
 
   /**
@@ -1322,8 +1562,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * List the network edge types (pipeline, choke, compressor, ...) and their
-   * params.
+   * List the network edge types by name (no_pressure_loss, pipe, choke,
+   * compressor, ...) and the fields of their data blocks.
    *
    * Free.
    */
@@ -1343,7 +1583,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * List the component names in the built-in equation-of-state database.
+   * List the component names in the built-in equation-of-state database and
+   * the short codes (C1, CO2, iC4, ...) the compositional tools also accept.
    *
    * Free.
    */
@@ -1352,9 +1593,10 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * The model vocabularies the flow-assurance tools accept — hydrate, wax
-   * and corrosion models with their tier, plus inhibitor names and vdWP
-   * guests.
+   * The model vocabularies the flow-assurance tools accept — hydrate, wax,
+   * asphaltene, corrosion and scale models with their tier, plus how wax
+   * formers are identified, inhibitor names, vdWP guests, the scale risk
+   * bands, the NACE MR0175 regions and the API RP 14E service classes.
    *
    * Free.
    */
@@ -1363,8 +1605,9 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * List the fluid types (oil, gas, water) and the required PVT
-   * configuration.
+   * List the black-oil fluid types (oil, gas, water): configuration fields,
+   * correlation names and defaults, and the reported property keys with
+   * units.
    *
    * Free.
    */
@@ -1373,7 +1616,9 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * List the network node types (junction, source, sink) and their params.
+   * List the network node types by name (fixed_rate_source,
+   * fixed_pressure_source, pressure_dependent_source, network_node,
+   * fixed_pressure_sink, fixed_rate_sink) and their fields.
    *
    * Free.
    */
@@ -1392,7 +1637,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Fit the Fetkovich C and n (deliverability) coefficients to test points.
+   * Fit A and B of the fetkovich_ab oil deliverability equation q = A·(pr −
+   * psat) + B·(psat² − pwf²) to test points.
    *
    * Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
    */
@@ -1401,7 +1647,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Fit the Forchheimer A and B (non-Darcy gas) coefficients to test points.
+   * Fit A and B of the forchheimer_ab gas deliverability equation pr² − pwf²
+   * = A·q + B·q² to test points.
    *
    * Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
    */
@@ -1422,7 +1669,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Fit the productivity index to observed (rate, flowing-BHP) test points.
+   * Fit the pi model's productivity index to observed (oil rate, flowing-
+   * BHP) test points.
    *
    * Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
    */
@@ -1443,7 +1691,8 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Fit the skin factor to observed (rate, flowing-BHP) test points.
+   * Fit the mechanical skin of a darcy or fetkovich model to observed (oil
+   * rate, flowing-BHP) test points.
    *
    * Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
    */
@@ -1453,14 +1702,28 @@ export abstract class GeneratedMethods {
 
   /**
    * Optimise a network: move control variables within bounds to maximise /
-   * minimise an objective (phase rate, revenue, pressure drop, power) under
-   * rate / pressure / resource constraints. The optimisation counterpart of
-   * solve_network.
+   * minimise an objective (phase rate, revenue, pressure drop, power,
+   * deviation from measurements) under rate / pressure / temperature /
+   * velocity / power / pump / resource constraints. The optimisation
+   * counterpart of solve_network.
    *
    * Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
    */
   optimise_network(params: OptimiseNetworkParams): Promise<ToolResponse> {
     return this.call("optimise_network", params);
+  }
+
+  /**
+   * How much CO2 and H2S is dissolved in the produced water, and the in-situ
+   * pH that leaves — the brine pH the corrosion models should consume
+   * instead of a condensed-water estimate.
+   *
+   * Costs 2 credits.
+   */
+  partition_acid_gas_in_water(
+    params: PartitionAcidGasInWaterParams,
+  ): Promise<ToolResponse> {
+    return this.call("partition_acid_gas_in_water", params);
   }
 
   /**
@@ -1503,8 +1766,10 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * PT flash of a composition (Peng-Robinson default, SRK, Patel-Teja):
-   * phase split, K-values, densities. Pressure in MPa.
+   * EOS flash of a composition (Peng-Robinson default, SRK, or GERG-2008 for
+   * single-phase gas): PT, PH or PS; phase split, K-values, phase densities,
+   * and optionally each phase's viscosity, enthalpy, entropy and heat
+   * capacities. Pressure in MPa.
    *
    * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
    */
@@ -1524,8 +1789,18 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Material-balance depletion / reserves over one or more reservoir blocks
-   * (STOIIP/GIIP, recovery, pressure decline, aquifer).
+   * Gas-reservoir depletion study: p/z, Bg, recovery factor and retrograde
+   * liquid per pressure step.
+   *
+   * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+   */
+  run_gas_depletion(params: RunGasDepletionParams): Promise<ToolResponse> {
+    return this.call("run_gas_depletion", params);
+  }
+
+  /**
+   * Tank material balance over one or more reservoir zones (STOIIP/GIIP,
+   * cumulative production, pressure decline, recovery factor); no aquifer.
    *
    * Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
    */
@@ -1533,6 +1808,16 @@ export abstract class GeneratedMethods {
     params: RunMaterialBalanceParams,
   ): Promise<ToolResponse> {
     return this.call("run_material_balance", params);
+  }
+
+  /**
+   * Mixing-cell miscibility test at one pressure: forward and backward
+   * contact series and whether either reached miscibility.
+   *
+   * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+   */
+  run_mmp_probe(params: RunMmpProbeParams): Promise<ToolResponse> {
+    return this.call("run_mmp_probe", params);
   }
 
   /**
@@ -1547,8 +1832,20 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Sensitivity / parametric sweep over a network (linear / tornado / grid /
-   * Monte Carlo); returns per-output statistics.
+   * Nodal analysis of one well inside a network: IPR sweep, VLP by full
+   * network solves, their operating point, and optional sensitivity
+   * overlays.
+   *
+   * Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+   */
+  run_nodal_study(params: RunNodalStudyParams): Promise<ToolResponse> {
+    return this.call("run_nodal_study", params);
+  }
+
+  /**
+   * Sensitivity / parametric study over a network (single-variable sweep,
+   * tornado, two-factor grid, Monte Carlo, envelope map); returns every run
+   * plus the study's summary.
    *
    * Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
    */
@@ -1559,13 +1856,25 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Simulate a process flow graph (mixers, separators, heaters, compressors)
-   * of compositional streams.
+   * Steady-state compositional flowsheet of Source, Separator, Mixer,
+   * Splitter and Sink nodes (no heaters or compressors), with recycle loops.
    *
    * Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
    */
   run_process_graph(params: RunProcessGraphParams): Promise<ToolResponse> {
     return this.call("run_process_graph", params);
+  }
+
+  /**
+   * Run several PVT experiments on one EOS fluid against lab data: per-field
+   * residuals and a weighted objective (evaluation, not tuning).
+   *
+   * Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+   */
+  run_pvt_regression_suite(
+    params: RunPvtRegressionSuiteParams,
+  ): Promise<ToolResponse> {
+    return this.call("run_pvt_regression_suite", params);
   }
 
   /**
@@ -1600,8 +1909,8 @@ export abstract class GeneratedMethods {
 
   /**
    * Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-
-   * Flux): the general-purpose scheme, carrying temperature, composition and
-   * salinity.
+   * Flux): the general-purpose scheme, carrying temperature, the oil/water
+   * split and salinity.
    *
    * Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
    */
@@ -1655,9 +1964,21 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Wax appearance temperature and margin: a C7+ screening correlation (Tier
-   * 1) or the Won multi-solid SLE (Tier 2) with per-component solid
-   * fractions.
+   * Mineral-scale saturation indices from a produced-water ion analysis —
+   * calcite, aragonite, siderite, barite, celestite, gypsum, anhydrite and
+   * halite — with the precipitable mass and the limiting ion.
+   *
+   * Costs 2 credits.
+   */
+  screen_scale_risk(params: ScreenScaleRiskParams): Promise<ToolResponse> {
+    return this.call("screen_scale_risk", params);
+  }
+
+  /**
+   * Wax appearance temperature and margin over three tiers: a C7+ screening
+   * correlation, the Won multi-solid SLE, or the non-ideal SLE flash with
+   * per-component solid fractions, measured melting data and the solubility
+   * gradient for the deposition rate.
    *
    * Costs 2 credits.
    */
@@ -1676,9 +1997,10 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Data-reconciliation solve (MAP): inject measured values with a variance
-   * and reconcile them, returning a posterior variance per reconciled
-   * quantity.
+   * Data-reconciliation solve (MAP): reconcile pressure gauges and rate
+   * meters, each with a variance, against the network physics and estimate
+   * uncertain source inputs, returning posterior variances and a per-
+   * measurement misfit.
    *
    * Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
    */

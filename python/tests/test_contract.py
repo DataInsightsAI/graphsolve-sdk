@@ -466,7 +466,7 @@ def test_every_tool_in_the_spec_has_a_method():
     }
     missing = {t for t in tools if not callable(getattr(GeneratedMethods, t, None))}
     assert not missing, f"{len(missing)} tools have no method: {sorted(missing)[:5]}"
-    assert len(tools) == 89
+    assert len(tools) == 98
 
 
 def test_a_generated_method_forwards_to_the_named_tool():
