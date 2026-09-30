@@ -22,3 +22,6 @@ uv.lock
 
 # Local only: the list names what must not be published.
 .github/private-names.txt
+
+# macOS
+.DS_Store
