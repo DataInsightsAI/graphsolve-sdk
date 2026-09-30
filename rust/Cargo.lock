@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "graphsolve"
-version = "1.0.34"
+version = "1.0.40"
 dependencies = [
  "anyhow",
  "clap",

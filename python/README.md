@@ -14,7 +14,7 @@ from graphsolve import GraphSolve
 
 gs = GraphSolve()          # or GraphSolve(api_key)
 
-# Any of the 89 tools
+# Any of the 98 tools
 result = gs.call("solve_network", {"network_json": model})
 print(result["metadata"]["billing"]["credits_charged"])
 

@@ -4,8 +4,8 @@ GENERATED FROM spec/graphsolve-v1.json — DO NOT EDIT BY HAND.
 Run `python emit/emit_python.py` after a spec change; CI fails if this
 file and the spec disagree.
 
-Engine API version: 1.0.35
-Tools: 89
+Engine API version: 1.0.40
+Tools: 98
 """
 
 from __future__ import annotations
@@ -39,7 +39,9 @@ class GeneratedMethods:
         binary_interactions: list[dict[str, Any]] | None = None,
         component_names: list[str] | None = None,
         components: list[dict[str, Any]] | None = None,
-        eos_model: Literal["PengRobinson", "SoaveRedlichKwong", "PatelTeja"] | None = None,
+        eos_model: Literal["PengRobinson", "SoaveRedlichKwong"] | None = None,
+        separator_pressures_mpa: list[float] | None = None,
+        separator_temperatures_k: list[float] | None = None,
     ) -> dict[str, Any]:
         """Tune the heavy/light split of a composition to match a target surface GOR
         (Sm³/Sm³).
@@ -55,6 +57,8 @@ class GeneratedMethods:
                 component_names=component_names,
                 components=components,
                 eos_model=eos_model,
+                separator_pressures_mpa=separator_pressures_mpa,
+                separator_temperatures_k=separator_temperatures_k,
             ),
         )
 
@@ -68,9 +72,10 @@ class GeneratedMethods:
         binary_interactions: list[dict[str, Any]] | None = None,
         component_names: list[str] | None = None,
         components: list[dict[str, Any]] | None = None,
-        eos_model: Literal["PengRobinson", "SoaveRedlichKwong", "PatelTeja"] | None = None,
+        eos_model: Literal["PengRobinson", "SoaveRedlichKwong"] | None = None,
     ) -> dict[str, Any]:
-        """Tune a composition to a target in-situ GOR (m3/m3) at given P/T.
+        """Tune a composition to a target in-situ gas-oil volume ratio (m3/m3) at
+        given P/T.
 
         Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
         """
@@ -111,9 +116,8 @@ class GeneratedMethods:
         *,
         network_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
-        """Source-tagged production allocation (back-allocation): attribute
-        commingled rates back to each tagged source, including lift-gas
-        accounting.
+        """Source-tagged production allocation (back-allocation): solve the network
+        and attribute the mass on every edge back to the sources it came from.
 
         Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
         """
@@ -167,10 +171,13 @@ class GeneratedMethods:
         inlet_temperature: float,
         oil_rate: float,
         water_rate: float,
+        discharge_coefficient: float | None = None,
         dissolved_gas_ratio: float | None = None,
         gas_mw: float | None = None,
         oil_density: float | None = None,
-        slip_model: str | None = None,
+        perry_multiplier: float | None = None,
+        pipe_diameter_ratio: float | None = None,
+        slip_model: Literal["no_slip", "gromles", "hydro", "constant_slip", "fauske", "moddy", "simpson", "thom", "baroczy", "lockhart_martenelli"] | None = None,
         water_salinity: float | None = None,
     ) -> dict[str, Any]:
         """Pressure drop across a choke of known diameter at given rates (Sachdeva
@@ -187,9 +194,12 @@ class GeneratedMethods:
                 inlet_temperature=inlet_temperature,
                 oil_rate=oil_rate,
                 water_rate=water_rate,
+                discharge_coefficient=discharge_coefficient,
                 dissolved_gas_ratio=dissolved_gas_ratio,
                 gas_mw=gas_mw,
                 oil_density=oil_density,
+                perry_multiplier=perry_multiplier,
+                pipe_diameter_ratio=pipe_diameter_ratio,
                 slip_model=slip_model,
                 water_salinity=water_salinity,
             ),
@@ -204,10 +214,13 @@ class GeneratedMethods:
         upstream_pressure: float,
         upstream_temperature: float,
         water_rate: float,
+        discharge_coefficient: float | None = None,
         dissolved_gor: float | None = None,
         gas_mw: float | None = None,
         oil_density: float | None = None,
-        slip_model: str | None = None,
+        perry_multiplier: float | None = None,
+        pipe_diameter_ratio: float | None = None,
+        slip_model: Literal["no_slip", "gromles", "hydro", "constant_slip", "fauske", "moddy", "simpson", "thom", "baroczy", "lockhart_martenelli"] | None = None,
         water_salinity: float | None = None,
     ) -> dict[str, Any]:
         """Size a choke: find the bean diameter that gives a target downstream
@@ -224,9 +237,12 @@ class GeneratedMethods:
                 upstream_pressure=upstream_pressure,
                 upstream_temperature=upstream_temperature,
                 water_rate=water_rate,
+                discharge_coefficient=discharge_coefficient,
                 dissolved_gor=dissolved_gor,
                 gas_mw=gas_mw,
                 oil_density=oil_density,
+                perry_multiplier=perry_multiplier,
+                pipe_diameter_ratio=pipe_diameter_ratio,
                 slip_model=slip_model,
                 water_salinity=water_salinity,
             ),
@@ -309,6 +325,31 @@ class GeneratedMethods:
             ),
         )
 
+    def calculate_critical_point(
+        self,
+        *,
+        mole_fractions: list[float],
+        binary_interactions: list[dict[str, Any]] | None = None,
+        component_names: list[str] | None = None,
+        components: list[dict[str, Any]] | None = None,
+        eos_model: Literal["PengRobinson", "SoaveRedlichKwong"] | None = None,
+    ) -> dict[str, Any]:
+        """True critical point of a mixture (Heidemann-Khalil) with a cubic EOS:
+        critical temperature, pressure, molar volume and Z-factor.
+
+        Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+        """
+        return self.call(
+            "calculate_critical_point",
+            _present(
+                mole_fractions=mole_fractions,
+                binary_interactions=binary_interactions,
+                component_names=component_names,
+                components=components,
+                eos_model=eos_model,
+            ),
+        )
+
     def calculate_erosional_velocity(
         self,
         *,
@@ -318,8 +359,9 @@ class GeneratedMethods:
         temperature: float,
         c_factor: float | None = None,
     ) -> dict[str, Any]:
-        """API RP 14E erosional velocity limit and the actual mixture velocity for a
-        pipe.
+        """API RP 14E erosional velocity limit (1.22 C / sqrt(rho_mix) in SI), the
+        actual mixture velocity for a pipe, and the flow at which the pipe reaches
+        the limit.
 
         Costs 1 credit.
         """
@@ -358,7 +400,7 @@ class GeneratedMethods:
     def calculate_gas_dew_point(
         self,
         *,
-        condensate_gas_ratio: float,
+        condensate_gas_ratio_stb_per_mmscf: float,
         gas_gravity: float,
         oil_api_gravity: float,
         temperature: float,
@@ -371,7 +413,7 @@ class GeneratedMethods:
         return self.call(
             "calculate_gas_dew_point",
             _present(
-                condensate_gas_ratio=condensate_gas_ratio,
+                condensate_gas_ratio_stb_per_mmscf=condensate_gas_ratio_stb_per_mmscf,
                 gas_gravity=gas_gravity,
                 oil_api_gravity=oil_api_gravity,
                 temperature=temperature,
@@ -384,15 +426,18 @@ class GeneratedMethods:
         fluid: dict[str, Any],
         inlet_pressure: float,
         inlet_temperature: float,
-        mode: str,
+        mode: Literal["fixed_duty", "fixed_outlet_temperature", "approach_temperature", "ua"],
         approach_temperature: float | None = None,
-        duty: float | None = None,
+        heat_duty: float | None = None,
+        max_duty: float | None = None,
+        outlet_temperature: float | None = None,
         pressure_drop: float | None = None,
-        reference_temperature: float | None = None,
-        target_temperature: float | None = None,
+        ua: float | None = None,
+        utility_temperature: float | None = None,
     ) -> dict[str, Any]:
-        """Heater/cooler in fixed_duty, fixed_temperature, or approach_temperature
-        mode; returns outlet P/T and duty.
+        """Heater/cooler on the network edge's energy balance, in fixed_duty,
+        fixed_outlet_temperature, approach_temperature or ua mode; returns outlet
+        P/T and duty.
 
         Costs 1 credit.
         """
@@ -404,10 +449,12 @@ class GeneratedMethods:
                 inlet_temperature=inlet_temperature,
                 mode=mode,
                 approach_temperature=approach_temperature,
-                duty=duty,
+                heat_duty=heat_duty,
+                max_duty=max_duty,
+                outlet_temperature=outlet_temperature,
                 pressure_drop=pressure_drop,
-                reference_temperature=reference_temperature,
-                target_temperature=target_temperature,
+                ua=ua,
+                utility_temperature=utility_temperature,
             ),
         )
 
@@ -419,8 +466,9 @@ class GeneratedMethods:
         co2_mole_fraction: float | None = None,
         h2s_mole_fraction: float | None = None,
     ) -> dict[str, Any]:
-        """Hydrate formation temperature at a given pressure (Baillie-Wichert) with
-        sour-gas corrections.
+        """Hydrate formation temperature at a given pressure and gas gravity from the
+        Towler-Mokhatab screening correlation; H2S and CO2 inputs are echoed, not
+        applied.
 
         Costs 1 credit.
         """
@@ -501,8 +549,8 @@ class GeneratedMethods:
         *,
         allocation_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
-        """Multiphase-flow-meter allocation: distribute measured rates among streams
-        (in-situ -> standard conditions).
+        """Multiphase-flow-meter allocation: convert one meter reading (in-situ) to
+        standard-condition rates with an EOS.
 
         Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
         """
@@ -552,14 +600,14 @@ class GeneratedMethods:
         wellhead_pressure: float,
         wellhead_temperature: float,
         dissolved_gas_ratio: float | None = None,
-        flow_correlation: str | None = None,
+        flow_correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"] | None = None,
         gas_mw: float | None = None,
         oil_density: float | None = None,
         tubing_angle: float | None = None,
         water_salinity: float | None = None,
     ) -> dict[str, Any]:
-        """Operating point = IPR intersect VLP. Generates both curves and finds the
-        stabilised rate and flowing BHP.
+        """Operating point = IPR intersect VLP for one well and one tubing run.
+        Generates both curves and finds the stabilised rate and flowing BHP.
 
         Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
         """
@@ -621,17 +669,17 @@ class GeneratedMethods:
         roughness: float,
         water_rate: float,
         dissolved_gas_ratio: float | None = None,
-        flow_boundary: str | None = None,
-        flow_correlation: str | None = None,
+        flow_boundary: Literal["top", "bottom"] | None = None,
+        flow_correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"] | None = None,
         gas_mw: float | None = None,
         heat_transfer_coefficient: float | None = None,
         oil_density: float | None = None,
-        pressure_boundary: str | None = None,
+        pressure_boundary: Literal["top", "bottom"] | None = None,
         surrounding_temperature: float | None = None,
         water_salinity: float | None = None,
     ) -> dict[str, Any]:
-        """March pressure and temperature along a single pipe (multi-segment) with
-        heat transfer.
+        """March pressure and temperature along a single straight pipe (one diameter,
+        length and angle) with heat transfer.
 
         Costs 3 credits.
         """
@@ -672,8 +720,9 @@ class GeneratedMethods:
         velocity: list[float],
         viscosity: list[float],
     ) -> dict[str, Any]:
-        """Multiphase pressure gradient for a single pipe segment using a chosen
-        correlation. Returns gradient components, holdup and flow regime.
+        """Multiphase pressure gradient at one point in a pipe using a chosen
+        correlation. Returns gradient components, holdup, flow regime and
+        hydraulics.
 
         Costs 1 credit.
         """
@@ -692,6 +741,42 @@ class GeneratedMethods:
             ),
         )
 
+    def calculate_pump(
+        self,
+        *,
+        fluid: dict[str, Any],
+        inlet_pressure: float,
+        inlet_temperature: float,
+        centrifugal: dict[str, Any] | None = None,
+        efficiency: float | None = None,
+        head_curve: list[list[float]] | None = None,
+        mechanical_efficiency: float | None = None,
+        minor_loss_coefficient: float | None = None,
+        nozzle_diameter: float | None = None,
+        npsh_required: float | None = None,
+    ) -> dict[str, Any]:
+        """Centrifugal pump or ESP at one suction state on the network pump model:
+        discharge P/T, head, power, NPSH, per-section operating range and the ESP
+        drive train.
+
+        Costs 1 credit.
+        """
+        return self.call(
+            "calculate_pump",
+            _present(
+                fluid=fluid,
+                inlet_pressure=inlet_pressure,
+                inlet_temperature=inlet_temperature,
+                centrifugal=centrifugal,
+                efficiency=efficiency,
+                head_curve=head_curve,
+                mechanical_efficiency=mechanical_efficiency,
+                minor_loss_coefficient=minor_loss_coefficient,
+                nozzle_diameter=nozzle_diameter,
+                npsh_required=npsh_required,
+            ),
+        )
+
     def calculate_pump_head(
         self,
         *,
@@ -701,8 +786,9 @@ class GeneratedMethods:
         inlet_temperature: float,
         liquid_density: float,
     ) -> dict[str, Any]:
-        """ESP/pump outlet pressure from a head-vs-rate performance curve,
-        interpolated at the operating rate and converted with liquid density.
+        """Single head-curve lookup: discharge pressure from one head-vs-rate curve
+        read at one flow with one liquid density. No stages, speed, gas or power
+        model; see calculate_pump.
 
         Costs 1 credit.
         """
@@ -725,6 +811,7 @@ class GeneratedMethods:
         upstream_pressure: float,
         upstream_temperature: float,
         cgr: float | None = None,
+        discharge_coefficient: float | None = None,
         dissolved_gor: float | None = None,
         fixed: str | None = None,
         free_gas_rate: float | None = None,
@@ -732,7 +819,9 @@ class GeneratedMethods:
         gor: float | None = None,
         oil_density: float | None = None,
         oil_rate: float | None = None,
-        slip_model: str | None = None,
+        perry_multiplier: float | None = None,
+        pipe_diameter_ratio: float | None = None,
+        slip_model: Literal["no_slip", "gromles", "hydro", "constant_slip", "fauske", "moddy", "simpson", "thom", "baroczy", "lockhart_martenelli"] | None = None,
         target_downstream_temperature: float | None = None,
         water_rate: float | None = None,
         water_salinity: float | None = None,
@@ -752,6 +841,7 @@ class GeneratedMethods:
                 upstream_pressure=upstream_pressure,
                 upstream_temperature=upstream_temperature,
                 cgr=cgr,
+                discharge_coefficient=discharge_coefficient,
                 dissolved_gor=dissolved_gor,
                 fixed=fixed,
                 free_gas_rate=free_gas_rate,
@@ -759,6 +849,8 @@ class GeneratedMethods:
                 gor=gor,
                 oil_density=oil_density,
                 oil_rate=oil_rate,
+                perry_multiplier=perry_multiplier,
+                pipe_diameter_ratio=pipe_diameter_ratio,
                 slip_model=slip_model,
                 target_downstream_temperature=target_downstream_temperature,
                 water_rate=water_rate,
@@ -818,7 +910,7 @@ class GeneratedMethods:
         binary_interactions: list[dict[str, Any]] | None = None,
         component_names: list[str] | None = None,
         components: list[dict[str, Any]] | None = None,
-        eos_model: Literal["PengRobinson", "SoaveRedlichKwong", "PatelTeja"] | None = None,
+        eos_model: Literal["PengRobinson", "SoaveRedlichKwong"] | None = None,
     ) -> dict[str, Any]:
         """Reid vapour pressure (RVP) of a liquid composition at 100 degF.
 
@@ -838,25 +930,33 @@ class GeneratedMethods:
     def calculate_saturation_pressure(
         self,
         *,
-        component_names: list[str],
         mole_fractions: list[float],
-        temperature_k: float,
-        boundary: str | None = None,
-        eos_model: str | None = None,
+        algorithm: Literal["classical", "bell_jaeger", "multi_start", "envelope"] | None = None,
+        binary_interactions: list[dict[str, Any]] | None = None,
+        boundary: Literal["bubble", "dew"] | None = None,
+        component_names: list[str] | None = None,
+        components: list[dict[str, Any]] | None = None,
+        eos_model: Literal["PengRobinson", "SoaveRedlichKwong"] | None = None,
+        pressure_mpa: float | None = None,
+        temperature_k: float | None = None,
     ) -> dict[str, Any]:
-        """Bubble- or dew-point pressure of a composition at a given temperature
-        (cubic EOS).
+        """Bubble- or dew-point pressure of a composition at a temperature, or
+        bubble- or dew-point temperature at a pressure (cubic EOS).
 
         Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
         """
         return self.call(
             "calculate_saturation_pressure",
             _present(
-                component_names=component_names,
                 mole_fractions=mole_fractions,
-                temperature_k=temperature_k,
+                algorithm=algorithm,
+                binary_interactions=binary_interactions,
                 boundary=boundary,
+                component_names=component_names,
+                components=components,
                 eos_model=eos_model,
+                pressure_mpa=pressure_mpa,
+                temperature_k=temperature_k,
             ),
         )
 
@@ -878,7 +978,8 @@ class GeneratedMethods:
         volumetric_efficiency: float | None = None,
     ) -> dict[str, Any]:
         """Screw (positive-displacement) compressor closed by black-box efficiencies;
-        flow set by displacement x shaft speed x volumetric efficiency.
+        mass flow = volumetric efficiency x suction density x displacement per
+        revolution x shaft speed in rev/s.
 
         Costs 1 credit.
         """
@@ -953,8 +1054,8 @@ class GeneratedMethods:
         temperature: float,
         salinity: float | None = None,
     ) -> dict[str, Any]:
-        """Brine properties (density, viscosity, compressibility, FVF) via IAPWS-95
-        with a salinity correction.
+        """Brine properties (density, viscosity, compressibility, heat capacity,
+        enthalpy) with a salinity correction.
 
         Costs 1 credit.
         """
@@ -1006,12 +1107,12 @@ class GeneratedMethods:
         self,
         *,
         boiling_point: float | None = None,
-        method: str | None = None,
+        method: Literal["kesler_lee", "twu", "sancet"] | None = None,
         molecular_weight: float | None = None,
         specific_gravity: float | None = None,
     ) -> dict[str, Any]:
-        """Critical properties (Tc, Pc, Vc, Watson K) of a pseudo-component from any
-        two of MW / specific gravity / boiling point.
+        """Critical properties (Tc, Pc, Vc), acentric factor and Watson K of a
+        pseudo-component from any two of MW / specific gravity / boiling point.
 
         Costs 1 credit.
         """
@@ -1032,6 +1133,11 @@ class GeneratedMethods:
         inlet: dict[str, Any],
         pipe_segments: Any,
         correlations: list[Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"]] | None = None,
+        reference_measured_depth: float | None = None,
+        reference_true_vertical_depth: float | None = None,
+        reference_x: float | None = None,
+        reference_y: float | None = None,
+        reference_z: float | None = None,
     ) -> dict[str, Any]:
         """Walk a multi-segment pipe with each correlation and compare the predicted
         outlet pressure.
@@ -1045,6 +1151,11 @@ class GeneratedMethods:
                 inlet=inlet,
                 pipe_segments=pipe_segments,
                 correlations=correlations,
+                reference_measured_depth=reference_measured_depth,
+                reference_true_vertical_depth=reference_true_vertical_depth,
+                reference_x=reference_x,
+                reference_y=reference_y,
+                reference_z=reference_z,
             ),
         )
 
@@ -1059,7 +1170,7 @@ class GeneratedMethods:
         roughness: float,
         velocity: list[float],
         viscosity: list[float],
-        correlations: list[str] | None = None,
+        correlations: list[Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"]] | None = None,
     ) -> dict[str, Any]:
         """Run every multiphase pressure-drop correlation (or a subset) on one
         segment and compare the predicted gradients.
@@ -1185,10 +1296,12 @@ class GeneratedMethods:
         binary_interactions: list[dict[str, Any]] | None = None,
         component_names: list[str] | None = None,
         components: list[dict[str, Any]] | None = None,
-        eos_model: Literal["PengRobinson", "SoaveRedlichKwong", "PatelTeja"] | None = None,
+        eos_model: Literal["PengRobinson", "SoaveRedlichKwong"] | None = None,
+        separator_pressures_mpa: list[float] | None = None,
+        separator_temperatures_k: list[float] | None = None,
     ) -> dict[str, Any]:
-        """Flash a reservoir composition to stock-tank: GOR, API/oil density,
-        shrinkage.
+        """Flash a composition through a separator train to stock-tank: GOR, oil
+        density, specific gravity and API gravity, gas gravity.
 
         Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
         """
@@ -1200,6 +1313,8 @@ class GeneratedMethods:
                 component_names=component_names,
                 components=components,
                 eos_model=eos_model,
+                separator_pressures_mpa=separator_pressures_mpa,
+                separator_temperatures_k=separator_temperatures_k,
             ),
         )
 
@@ -1228,7 +1343,7 @@ class GeneratedMethods:
         n_points: int | None = None,
     ) -> dict[str, Any]:
         """Inflow performance relationship (IPR) curve for one well; real physics per
-        point. Required inputs depend on ipr_model.
+        point. Required inputs depend on ipr_model (19 models).
 
         Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
         """
@@ -1243,20 +1358,24 @@ class GeneratedMethods:
     def generate_phase_envelope(
         self,
         *,
-        component_names: list[str],
         mole_fractions: list[float],
-        eos_model: str | None = None,
+        binary_interactions: list[dict[str, Any]] | None = None,
+        component_names: list[str] | None = None,
+        components: list[dict[str, Any]] | None = None,
+        eos_model: Literal["PengRobinson", "SoaveRedlichKwong"] | None = None,
     ) -> dict[str, Any]:
         """Two-phase P-T envelope (dew/bubble locus + critical point) of a
-        composition (cubic EOS only; not GERG).
+        composition (Peng-Robinson or SRK).
 
         Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
         """
         return self.call(
             "generate_phase_envelope",
             _present(
-                component_names=component_names,
                 mole_fractions=mole_fractions,
+                binary_interactions=binary_interactions,
+                component_names=component_names,
+                components=components,
                 eos_model=eos_model,
             ),
         )
@@ -1289,7 +1408,8 @@ class GeneratedMethods:
         td_min: float | None = None,
     ) -> dict[str, Any]:
         """Dimensionless transient type-curve surface (pD/qD, Bourdet derivative) for
-        a transient ipr_model.
+        a transient ipr_model, with the dimensionless groups derived from the
+        geometry.
 
         Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
         """
@@ -1308,7 +1428,8 @@ class GeneratedMethods:
         *,
         name: str,
     ) -> dict[str, Any]:
-        """Critical properties (Tc, Pc, omega, MW) of a single EOS component by name.
+        """Critical properties (Tc, Pc in MPa, omega, MW) of a single EOS component
+        by database name or short code.
 
         Free.
         """
@@ -1316,6 +1437,23 @@ class GeneratedMethods:
             "get_eos_component",
             _present(
                 name=name,
+            ),
+        )
+
+    def import_prp_fluid(
+        self,
+        *,
+        prp_text: str,
+    ) -> dict[str, Any]:
+        """Import a PVTsim .prp fluid file (text) as a composition for the PVT,
+        process-graph and MPFM tools.
+
+        Costs 1 credit.
+        """
+        return self.call(
+            "import_prp_fluid",
+            _present(
+                prp_text=prp_text,
             ),
         )
 
@@ -1338,8 +1476,8 @@ class GeneratedMethods:
     def list_edge_types(
         self,
     ) -> dict[str, Any]:
-        """List the network edge types (pipeline, choke, compressor, ...) and their
-        params.
+        """List the network edge types by name (no_pressure_loss, pipe, choke,
+        compressor, ...) and the fields of their data blocks.
 
         Free.
         """
@@ -1367,7 +1505,8 @@ class GeneratedMethods:
     def list_eos_components(
         self,
     ) -> dict[str, Any]:
-        """List the component names in the built-in equation-of-state database.
+        """List the component names in the built-in equation-of-state database and
+        the short codes (C1, CO2, iC4, ...) the compositional tools also accept.
 
         Free.
         """
@@ -1379,8 +1518,10 @@ class GeneratedMethods:
     def list_flow_assurance_models(
         self,
     ) -> dict[str, Any]:
-        """The model vocabularies the flow-assurance tools accept — hydrate, wax and
-        corrosion models with their tier, plus inhibitor names and vdWP guests.
+        """The model vocabularies the flow-assurance tools accept — hydrate, wax,
+        asphaltene, corrosion and scale models with their tier, plus how wax
+        formers are identified, inhibitor names, vdWP guests, the scale risk
+        bands, the NACE MR0175 regions and the API RP 14E service classes.
 
         Free.
         """
@@ -1392,7 +1533,8 @@ class GeneratedMethods:
     def list_fluid_types(
         self,
     ) -> dict[str, Any]:
-        """List the fluid types (oil, gas, water) and the required PVT configuration.
+        """List the black-oil fluid types (oil, gas, water): configuration fields,
+        correlation names and defaults, and the reported property keys with units.
 
         Free.
         """
@@ -1404,7 +1546,9 @@ class GeneratedMethods:
     def list_node_types(
         self,
     ) -> dict[str, Any]:
-        """List the network node types (junction, source, sink) and their params.
+        """List the network node types by name (fixed_rate_source,
+        fixed_pressure_source, pressure_dependent_source, network_node,
+        fixed_pressure_sink, fixed_rate_sink) and their fields.
 
         Free.
         """
@@ -1431,7 +1575,8 @@ class GeneratedMethods:
         *,
         inflow_model: Any,
     ) -> dict[str, Any]:
-        """Fit the Fetkovich C and n (deliverability) coefficients to test points.
+        """Fit A and B of the fetkovich_ab oil deliverability equation q = A·(pr −
+        psat) + B·(psat² − pwf²) to test points.
 
         Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
         """
@@ -1447,7 +1592,8 @@ class GeneratedMethods:
         *,
         inflow_model: Any,
     ) -> dict[str, Any]:
-        """Fit the Forchheimer A and B (non-Darcy gas) coefficients to test points.
+        """Fit A and B of the forchheimer_ab gas deliverability equation pr² − pwf² =
+        A·q + B·q² to test points.
 
         Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
         """
@@ -1462,7 +1608,7 @@ class GeneratedMethods:
         self,
         *,
         inflow_model: Any,
-        match_target: str | None = None,
+        match_target: Literal["productivity_index", "skin", "forchheimer_ab", "fetkovich_ab"] | None = None,
     ) -> dict[str, Any]:
         """Unified matching dispatcher: fit productivity_index / skin /
         forchheimer_ab / fetkovich_ab, routed by match_target or ipr_model.
@@ -1482,7 +1628,8 @@ class GeneratedMethods:
         *,
         inflow_model: Any,
     ) -> dict[str, Any]:
-        """Fit the productivity index to observed (rate, flowing-BHP) test points.
+        """Fit the pi model's productivity index to observed (oil rate, flowing-BHP)
+        test points.
 
         Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
         """
@@ -1515,7 +1662,8 @@ class GeneratedMethods:
         *,
         inflow_model: Any,
     ) -> dict[str, Any]:
-        """Fit the skin factor to observed (rate, flowing-BHP) test points.
+        """Fit the mechanical skin of a darcy or fetkovich model to observed (oil
+        rate, flowing-BHP) test points.
 
         Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
         """
@@ -1532,9 +1680,10 @@ class GeneratedMethods:
         optimisation_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
         """Optimise a network: move control variables within bounds to maximise /
-        minimise an objective (phase rate, revenue, pressure drop, power) under
-        rate / pressure / resource constraints. The optimisation counterpart of
-        solve_network.
+        minimise an objective (phase rate, revenue, pressure drop, power,
+        deviation from measurements) under rate / pressure / temperature /
+        velocity / power / pump / resource constraints. The optimisation
+        counterpart of solve_network.
 
         Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
         """
@@ -1542,6 +1691,44 @@ class GeneratedMethods:
             "optimise_network",
             _present(
                 optimisation_json=optimisation_json,
+            ),
+        )
+
+    def partition_acid_gas_in_water(
+        self,
+        *,
+        pressure: float,
+        temperature: float,
+        water_analysis: dict[str, Any],
+        co2_fugacity_bar: float | None = None,
+        co2_mass_rate: float | None = None,
+        co2_mole_fraction: float | None = None,
+        h2s_fugacity_bar: float | None = None,
+        h2s_mass_rate: float | None = None,
+        h2s_mole_fraction: float | None = None,
+        ph: float | None = None,
+        water_mass_rate: float | None = None,
+    ) -> dict[str, Any]:
+        """How much CO2 and H2S is dissolved in the produced water, and the in-situ
+        pH that leaves — the brine pH the corrosion models should consume instead
+        of a condensed-water estimate.
+
+        Costs 2 credits.
+        """
+        return self.call(
+            "partition_acid_gas_in_water",
+            _present(
+                pressure=pressure,
+                temperature=temperature,
+                water_analysis=water_analysis,
+                co2_fugacity_bar=co2_fugacity_bar,
+                co2_mass_rate=co2_mass_rate,
+                co2_mole_fraction=co2_mole_fraction,
+                h2s_fugacity_bar=h2s_fugacity_bar,
+                h2s_mass_rate=h2s_mass_rate,
+                h2s_mole_fraction=h2s_mole_fraction,
+                ph=ph,
+                water_mass_rate=water_mass_rate,
             ),
         )
 
@@ -1617,14 +1804,22 @@ class GeneratedMethods:
         *,
         mole_fractions: list[float],
         pressure_mpa: float,
-        temperature_k: float,
         binary_interactions: list[dict[str, Any]] | None = None,
         component_names: list[str] | None = None,
         components: list[dict[str, Any]] | None = None,
-        eos_model: Literal["PengRobinson", "SoaveRedlichKwong", "PatelTeja"] | None = None,
+        enthalpy_j_per_mol: float | None = None,
+        entropy_j_per_mol_k: float | None = None,
+        eos_model: Literal["PengRobinson", "SoaveRedlichKwong", "Gerg2008"] | None = None,
+        flash_type: Literal["pt", "ph", "ps"] | None = None,
+        gas_viscosity_model: Literal["auto", "lucas", "lbc", "wilke", "herning_zipperer", "chapman_enskog", "pedersen", "trapp", "expanded_fluid", "burgoyne_nielsen_stanko"] | None = None,
+        include_properties: bool | None = None,
+        liquid_viscosity_model: Literal["auto", "lucas", "lbc", "wilke", "herning_zipperer", "chapman_enskog", "pedersen", "trapp", "expanded_fluid", "burgoyne_nielsen_stanko"] | None = None,
+        temperature_k: float | None = None,
     ) -> dict[str, Any]:
-        """PT flash of a composition (Peng-Robinson default, SRK, Patel-Teja): phase
-        split, K-values, densities. Pressure in MPa.
+        """EOS flash of a composition (Peng-Robinson default, SRK, or GERG-2008 for
+        single-phase gas): PT, PH or PS; phase split, K-values, phase densities,
+        and optionally each phase's viscosity, enthalpy, entropy and heat
+        capacities. Pressure in MPa.
 
         Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
         """
@@ -1633,11 +1828,17 @@ class GeneratedMethods:
             _present(
                 mole_fractions=mole_fractions,
                 pressure_mpa=pressure_mpa,
-                temperature_k=temperature_k,
                 binary_interactions=binary_interactions,
                 component_names=component_names,
                 components=components,
+                enthalpy_j_per_mol=enthalpy_j_per_mol,
+                entropy_j_per_mol_k=entropy_j_per_mol_k,
                 eos_model=eos_model,
+                flash_type=flash_type,
+                gas_viscosity_model=gas_viscosity_model,
+                include_properties=include_properties,
+                liquid_viscosity_model=liquid_viscosity_model,
+                temperature_k=temperature_k,
             ),
         )
 
@@ -1659,13 +1860,30 @@ class GeneratedMethods:
             ),
         )
 
+    def run_gas_depletion(
+        self,
+        *,
+        experiment_json: dict[str, Any] | list[Any] | str,
+    ) -> dict[str, Any]:
+        """Gas-reservoir depletion study: p/z, Bg, recovery factor and retrograde
+        liquid per pressure step.
+
+        Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+        """
+        return self.call(
+            "run_gas_depletion",
+            _present(
+                experiment_json=experiment_json,
+            ),
+        )
+
     def run_material_balance(
         self,
         *,
         reservoir_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
-        """Material-balance depletion / reserves over one or more reservoir blocks
-        (STOIIP/GIIP, recovery, pressure decline, aquifer).
+        """Tank material balance over one or more reservoir zones (STOIIP/GIIP,
+        cumulative production, pressure decline, recovery factor); no aquifer.
 
         Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
         """
@@ -1673,6 +1891,23 @@ class GeneratedMethods:
             "run_material_balance",
             _present(
                 reservoir_json=reservoir_json,
+            ),
+        )
+
+    def run_mmp_probe(
+        self,
+        *,
+        experiment_json: dict[str, Any] | list[Any] | str,
+    ) -> dict[str, Any]:
+        """Mixing-cell miscibility test at one pressure: forward and backward contact
+        series and whether either reached miscibility.
+
+        Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+        """
+        return self.call(
+            "run_mmp_probe",
+            _present(
+                experiment_json=experiment_json,
             ),
         )
 
@@ -1694,13 +1929,31 @@ class GeneratedMethods:
             ),
         )
 
+    def run_nodal_study(
+        self,
+        *,
+        nodal_json: dict[str, Any] | list[Any] | str,
+    ) -> dict[str, Any]:
+        """Nodal analysis of one well inside a network: IPR sweep, VLP by full
+        network solves, their operating point, and optional sensitivity overlays.
+
+        Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+        """
+        return self.call(
+            "run_nodal_study",
+            _present(
+                nodal_json=nodal_json,
+            ),
+        )
+
     def run_parametric_study(
         self,
         *,
         study_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
-        """Sensitivity / parametric sweep over a network (linear / tornado / grid /
-        Monte Carlo); returns per-output statistics.
+        """Sensitivity / parametric study over a network (single-variable sweep,
+        tornado, two-factor grid, Monte Carlo, envelope map); returns every run
+        plus the study's summary.
 
         Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
         """
@@ -1716,8 +1969,8 @@ class GeneratedMethods:
         *,
         process_graph_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
-        """Simulate a process flow graph (mixers, separators, heaters, compressors)
-        of compositional streams.
+        """Steady-state compositional flowsheet of Source, Separator, Mixer, Splitter
+        and Sink nodes (no heaters or compressors), with recycle loops.
 
         Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
         """
@@ -1725,6 +1978,23 @@ class GeneratedMethods:
             "run_process_graph",
             _present(
                 process_graph_json=process_graph_json,
+            ),
+        )
+
+    def run_pvt_regression_suite(
+        self,
+        *,
+        experiment_json: dict[str, Any] | list[Any] | str,
+    ) -> dict[str, Any]:
+        """Run several PVT experiments on one EOS fluid against lab data: per-field
+        residuals and a weighted objective (evaluation, not tuning).
+
+        Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+        """
+        return self.call(
+            "run_pvt_regression_suite",
+            _present(
+                experiment_json=experiment_json,
             ),
         )
 
@@ -1785,8 +2055,8 @@ class GeneratedMethods:
         transient_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
         """Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-
-        Flux): the general-purpose scheme, carrying temperature, composition and
-        salinity.
+        Flux): the general-purpose scheme, carrying temperature, the oil/water
+        split and salinity.
 
         Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
         """
@@ -1892,21 +2162,70 @@ class GeneratedMethods:
             ),
         )
 
+    def screen_scale_risk(
+        self,
+        *,
+        pressure: float,
+        temperature: float,
+        water_analysis: dict[str, Any],
+        co2_fugacity_bar: float | None = None,
+        co2_mole_fraction: float | None = None,
+        h2s_fugacity_bar: float | None = None,
+        h2s_mole_fraction: float | None = None,
+        minerals: list[Literal["calcite", "aragonite", "siderite", "barite", "celestite", "gypsum", "anhydrite", "halite"]] | None = None,
+        ph: float | None = None,
+        water_mass_rate: float | None = None,
+    ) -> dict[str, Any]:
+        """Mineral-scale saturation indices from a produced-water ion analysis —
+        calcite, aragonite, siderite, barite, celestite, gypsum, anhydrite and
+        halite — with the precipitable mass and the limiting ion.
+
+        Costs 2 credits.
+        """
+        return self.call(
+            "screen_scale_risk",
+            _present(
+                pressure=pressure,
+                temperature=temperature,
+                water_analysis=water_analysis,
+                co2_fugacity_bar=co2_fugacity_bar,
+                co2_mole_fraction=co2_mole_fraction,
+                h2s_fugacity_bar=h2s_fugacity_bar,
+                h2s_mole_fraction=h2s_mole_fraction,
+                minerals=minerals,
+                ph=ph,
+                water_mass_rate=water_mass_rate,
+            ),
+        )
+
     def screen_wax_risk(
         self,
         *,
         temperature: float,
+        activity_model: Literal["regular_solution", "ideal"] | None = None,
+        component_names: list[str] | None = None,
         density_c7_plus: float | None = None,
-        model: Literal["screening", "won"] | None = None,
+        enthalpies_of_fusion: list[float] | None = None,
+        enthalpies_of_transition: list[float] | None = None,
+        heat_capacity_correction: bool | None = None,
+        heat_capacity_of_fusion_j_per_mol_k: list[float] | None = None,
+        liquid_molar_volume_cm3_per_mol: list[float] | None = None,
+        liquid_solubility_parameter_mpa_half: list[float] | None = None,
+        melting_points: list[float] | None = None,
+        model: Literal["screening", "won", "sle"] | None = None,
         mole_fractions: list[float] | None = None,
         molecular_weights: list[float] | None = None,
         mw_c7_plus: float | None = None,
         paraffin_mass_fraction: float | None = None,
+        solid_molar_volume_ratio: float | None = None,
+        transition_temperatures: list[float] | None = None,
         watson_k: float | None = None,
         wax_former_mask: list[bool] | None = None,
     ) -> dict[str, Any]:
-        """Wax appearance temperature and margin: a C7+ screening correlation (Tier
-        1) or the Won multi-solid SLE (Tier 2) with per-component solid fractions.
+        """Wax appearance temperature and margin over three tiers: a C7+ screening
+        correlation, the Won multi-solid SLE, or the non-ideal SLE flash with per-
+        component solid fractions, measured melting data and the solubility
+        gradient for the deposition rate.
 
         Costs 2 credits.
         """
@@ -1914,12 +2233,23 @@ class GeneratedMethods:
             "screen_wax_risk",
             _present(
                 temperature=temperature,
+                activity_model=activity_model,
+                component_names=component_names,
                 density_c7_plus=density_c7_plus,
+                enthalpies_of_fusion=enthalpies_of_fusion,
+                enthalpies_of_transition=enthalpies_of_transition,
+                heat_capacity_correction=heat_capacity_correction,
+                heat_capacity_of_fusion_j_per_mol_k=heat_capacity_of_fusion_j_per_mol_k,
+                liquid_molar_volume_cm3_per_mol=liquid_molar_volume_cm3_per_mol,
+                liquid_solubility_parameter_mpa_half=liquid_solubility_parameter_mpa_half,
+                melting_points=melting_points,
                 model=model,
                 mole_fractions=mole_fractions,
                 molecular_weights=molecular_weights,
                 mw_c7_plus=mw_c7_plus,
                 paraffin_mass_fraction=paraffin_mass_fraction,
+                solid_molar_volume_ratio=solid_molar_volume_ratio,
+                transition_temperatures=transition_temperatures,
                 watson_k=watson_k,
                 wax_former_mask=wax_former_mask,
             ),
@@ -1947,9 +2277,10 @@ class GeneratedMethods:
         *,
         network_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
-        """Data-reconciliation solve (MAP): inject measured values with a variance
-        and reconcile them, returning a posterior variance per reconciled
-        quantity.
+        """Data-reconciliation solve (MAP): reconcile pressure gauges and rate
+        meters, each with a variance, against the network physics and estimate
+        uncertain source inputs, returning posterior variances and a per-
+        measurement misfit.
 
         Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
         """
