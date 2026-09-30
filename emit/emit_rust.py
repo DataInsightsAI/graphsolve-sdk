@@ -165,7 +165,8 @@ def emit_enum(name: str, schema: dict[str, Any]) -> str:
         variant = pascal(value)
         for branch in schema.get("oneOf") or []:
             if branch.get("const") == value and branch.get("description"):
-                lines.append(f"    /// {branch['description'].strip()}")
+                for line in branch["description"].strip().splitlines():
+                    lines.append(f"    /// {line.strip()}")
         if value == default:
             lines.append("    #[default]")
         lines.append(f'    #[serde(rename = "{value}")]')
