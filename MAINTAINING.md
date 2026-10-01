@@ -111,7 +111,8 @@ scripts/sync-spec.sh ../<engine-checkout>/<generated>/graphsolve-v1.json
 Export `GRAPHSOLVE_SPEC_SOURCE` to skip the argument. The path is not written
 down here: this repository is public and the engine's is not.
 
-That copies the spec in, regenerates all three clients, and prints the diff.
+That copies the spec in, regenerates all three clients and the tool reference
+pages, and prints the diff.
 Review it: a removed tool, a newly required argument or a changed price is a
 breaking change. Then bump the three client versions, run
 `python scripts/check_versions.py` and each language's gate, and open a PR.
@@ -128,7 +129,7 @@ Have the **engine's release workflow open a pull request here.** Two rules:
    generated clients stale and turns `main` red on the drift check.
 2. **The PR must contain the spec and the regenerated clients.** So the engine
    job checks this repository out, copies in `.github/private-names.txt` from
-   its own private copy, copies the spec, runs the three emitters (needs Python
+   its own private copy, copies the spec, runs the four emitters (needs Python
    and `rustfmt` on the runner), commits and opens the PR. The names file is
    ignored, so `git add` never picks it up.
    Regenerating on this side instead does not work: a PR opened by

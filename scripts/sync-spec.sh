@@ -66,9 +66,11 @@ cp "$SOURCE" "$DEST"
 python3 "$ROOT/emit/emit_python.py"
 python3 "$ROOT/emit/emit_typescript.py"
 python3 "$ROOT/emit/emit_rust.py"
+python3 "$ROOT/emit/emit_docs.py"
 
 echo
-git -C "$ROOT" --no-pager diff --stat -- spec python typescript rust || true
+git -C "$ROOT" --no-pager diff --stat -- spec python typescript rust docs/reference/tools || true
+git -C "$ROOT" status --short -- docs/reference/tools
 echo
 echo "Now:"
 echo "  1. review the diff — a removed tool or a newly required argument is a"
