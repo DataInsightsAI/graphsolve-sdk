@@ -8,6 +8,8 @@ Minimum miscibility pressure (MMP) between a reservoir fluid and an injection ga
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_mmp) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_mmp) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_mmp)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -94,6 +96,8 @@ Critical properties (Tc, Pc, Vc), acentric factor and Watson K of a pseudo-compo
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.characterize_pseudo_component) · [TypeScript](../typescript/api/classes/GraphSolve.md#characterize_pseudo_component) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.characterize_pseudo_component)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -153,6 +157,8 @@ Import a PVTsim .prp fluid file (text) as a composition for the PVT, process-gra
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.import_prp_fluid) · [TypeScript](../typescript/api/classes/GraphSolve.md#import_prp_fluid) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.import_prp_fluid)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -205,6 +211,8 @@ Import a PVTsim .prp fluid file (text) as a composition for the PVT, process-gra
 Regress black-oil PVT correlations against measured lab data (bubble point, Rs, Bo, viscosity, density).
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.match_pvt) · [TypeScript](../typescript/api/classes/GraphSolve.md#match_pvt) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.match_pvt)
 
 ### Parameters
 
@@ -292,6 +300,8 @@ Constant composition expansion (CCE) PVT experiment.
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_cce) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_cce) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_cce)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -375,6 +385,8 @@ Constant volume depletion (CVD) PVT experiment (gas condensate / volatile oil).
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_cvd) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_cvd) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_cvd)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -455,6 +467,8 @@ Differential liberation expansion (DLE) PVT experiment.
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_dle) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_dle) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_dle)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -534,6 +548,8 @@ Differential liberation expansion (DLE) PVT experiment.
 Gas-reservoir depletion study: p/z, Bg, recovery factor and retrograde liquid per pressure step.
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_gas_depletion) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_gas_depletion) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_gas_depletion)
 
 ### Parameters
 
@@ -618,6 +634,8 @@ Mixing-cell miscibility test at one pressure: forward and backward contact serie
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_mmp_probe) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_mmp_probe) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_mmp_probe)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -700,6 +718,8 @@ Mixing-cell miscibility test at one pressure: forward and backward contact serie
 Run several PVT experiments on one EOS fluid against lab data: per-field residuals and a weighted objective (evaluation, not tuning).
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_pvt_regression_suite) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_pvt_regression_suite) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_pvt_regression_suite)
 
 ### Parameters
 
@@ -816,6 +836,8 @@ Run several PVT experiments on one EOS fluid against lab data: per-field residua
 Multi-stage separator test to stock-tank: stage GOR, FVF, stock-tank oil density.
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_separator_test) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_separator_test) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_separator_test)
 
 ### Parameters
 
@@ -936,6 +958,8 @@ Swelling test: add injection gas/solvent and report saturation pressure + swelli
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_swelling_test) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_swelling_test) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_swelling_test)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -1021,6 +1045,8 @@ Swelling test: add injection gas/solvent and report saturation pressure + swelli
 Split a heavy/plus fraction into N pseudo-components (gamma distribution). Front half of building a matched compositional fluid.
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.split_plus_fraction) · [TypeScript](../typescript/api/classes/GraphSolve.md#split_plus_fraction) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.split_plus_fraction)
 
 ### Parameters
 

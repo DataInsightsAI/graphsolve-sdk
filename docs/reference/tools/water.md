@@ -8,6 +8,8 @@ Gas dew-point pressure from temperature, gas gravity, oil API and condensate-gas
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_gas_dew_point) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_gas_dew_point) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_gas_dew_point)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -72,6 +74,8 @@ Gas dew-point pressure from temperature, gas gravity, oil API and condensate-gas
 Brine properties (density, viscosity, compressibility, heat capacity, enthalpy) with a salinity correction.
 
 **Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_water_properties) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_water_properties) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_water_properties)
 
 ### Parameters
 

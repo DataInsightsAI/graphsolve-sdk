@@ -149,12 +149,21 @@ def example_tabs(tool: str, args: dict[str, Any]) -> list[str]:
     return out
 
 
+def client_links(tool: str) -> str:
+    """Links to the tool's method in each language's API reference."""
+    python = f"../python.md#graphsolve.GraphSolve.{tool}"
+    typescript = f"../typescript/api/classes/GraphSolve.md#{tool}"
+    rust = f"https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.{tool}"
+    return f"[Python]({python}) · [TypeScript]({typescript}) · [Rust]({rust})"
+
+
 def tool_section(tool: str, op: dict[str, Any], comps: dict[str, Any]) -> list[str]:
     out = [f"## `{tool}`\n", f"{op.get('summary', '').strip()}\n"]
     extra = (op.get("description") or "").strip()
     if extra and extra != op.get("summary", "").strip():
         out.append(f"{extra}\n")
     out.append(f"**Price:** {credits_line(op['x-graphsolve-credits'])}\n")
+    out.append(f"**In each client:** {client_links(tool)}\n")
     out.append("### Parameters\n")
     out.extend(parameters(op, comps))
     out.append("")

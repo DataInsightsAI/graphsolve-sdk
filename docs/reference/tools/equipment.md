@@ -8,6 +8,8 @@ Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressu
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_compressor) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_compressor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_compressor)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -83,6 +85,8 @@ Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressu
 Multi-stage centrifugal train with optional inter-stage cooling; per-stage pressure ratios and overall discharge P/T, cooler duty and shaft power.
 
 **Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_multistage_compressor) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_multistage_compressor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_multistage_compressor)
 
 ### Parameters
 
@@ -184,6 +188,8 @@ Multi-stage centrifugal train with optional inter-stage cooling; per-stage press
 Centrifugal pump or ESP at one suction state on the network pump model: discharge P/T, head, power, NPSH, per-section operating range and the ESP drive train.
 
 **Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_pump) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_pump) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_pump)
 
 ### Parameters
 
@@ -367,6 +373,8 @@ Single head-curve lookup: discharge pressure from one head-vs-rate curve read at
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_pump_head) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_pump_head) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_pump_head)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -447,6 +455,8 @@ Single head-curve lookup: discharge pressure from one head-vs-rate curve read at
 Reciprocating (positive-displacement) compressor. Mass flow is set by displacement x speed x volumetric efficiency, not supplied.
 
 **Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_reciprocating_compressor) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_reciprocating_compressor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_reciprocating_compressor)
 
 ### Parameters
 
@@ -529,6 +539,8 @@ Screw (positive-displacement) compressor closed by black-box efficiencies; mass 
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_screw_compressor) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_screw_compressor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_screw_compressor)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -608,6 +620,8 @@ Screw (positive-displacement) compressor closed by black-box efficiencies; mass 
 Single-stage centrifugal turbine/expander: outlet P/T and power generated from inlet P/T and an expansion pressure ratio (0 < PR < 1).
 
 **Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_turbine) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_turbine) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_turbine)
 
 ### Parameters
 

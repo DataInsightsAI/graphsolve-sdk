@@ -8,6 +8,8 @@ Source-tagged production allocation (back-allocation): solve the network and att
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.allocate_production) · [TypeScript](../typescript/api/classes/GraphSolve.md#allocate_production) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.allocate_production)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -547,6 +549,8 @@ Optimise a network: move control variables within bounds to maximise / minimise 
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.optimise_network) · [TypeScript](../typescript/api/classes/GraphSolve.md#optimise_network) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.optimise_network)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -1070,6 +1074,8 @@ Optimise a network: move control variables within bounds to maximise / minimise 
 Trace component compositions through an already-solved network.
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_molecule_tracking) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_molecule_tracking) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_molecule_tracking)
 
 ### Parameters
 
@@ -1683,6 +1689,8 @@ Solve a complete production network (Newton-Raphson): pressures, temperatures an
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.solve_network) · [TypeScript](../typescript/api/classes/GraphSolve.md#solve_network) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.solve_network)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -2020,6 +2028,8 @@ Solve a complete production network (Newton-Raphson): pressures, temperatures an
 Data-reconciliation solve (MAP): reconcile pressure gauges and rate meters, each with a variance, against the network physics and estimate uncertain source inputs, returning posterior variances and a per-measurement misfit.
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.solve_network_map) · [TypeScript](../typescript/api/classes/GraphSolve.md#solve_network_map) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.solve_network_map)
 
 ### Parameters
 

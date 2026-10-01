@@ -28,3 +28,6 @@ uv.lock
 
 # Docs build output
 site/
+
+# TypeDoc output, generated from typescript/src on every docs build
+docs/reference/typescript/api/

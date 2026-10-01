@@ -8,6 +8,8 @@ Pre-flight check a network payload without solving (runs the same build step sol
 
 **Price:** Free.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.validate_solver_payload) · [TypeScript](../typescript/api/classes/GraphSolve.md#validate_solver_payload) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.validate_solver_payload)
+
 ### Parameters
 
 | Name | Type | Required | Description |

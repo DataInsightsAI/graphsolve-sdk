@@ -8,6 +8,8 @@ Tune the heavy/light split of a composition to match a target surface GOR (Sm³/
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.adjust_composition_to_gor) · [TypeScript](../typescript/api/classes/GraphSolve.md#adjust_composition_to_gor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.adjust_composition_to_gor)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -73,6 +75,8 @@ Tune the heavy/light split of a composition to match a target surface GOR (Sm³/
 Tune a composition to a target in-situ gas-oil volume ratio (m3/m3) at given P/T.
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.adjust_composition_to_phase_ratio) · [TypeScript](../typescript/api/classes/GraphSolve.md#adjust_composition_to_phase_ratio) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.adjust_composition_to_phase_ratio)
 
 ### Parameters
 
@@ -146,6 +150,8 @@ True critical point of a mixture (Heidemann-Khalil) with a cubic EOS: critical t
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_critical_point) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_critical_point) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_critical_point)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -205,6 +211,8 @@ True critical point of a mixture (Heidemann-Khalil) with a cubic EOS: critical t
 Multiphase-flow-meter allocation: convert one meter reading (in-situ) to standard-condition rates with an EOS.
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_mpfm_allocation) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_mpfm_allocation) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_mpfm_allocation)
 
 ### Parameters
 
@@ -304,6 +312,8 @@ Reid vapour pressure (RVP) of a liquid composition at 100 degF.
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_reid_vapour_pressure) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_reid_vapour_pressure) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_reid_vapour_pressure)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -363,6 +373,8 @@ Reid vapour pressure (RVP) of a liquid composition at 100 degF.
 Bubble- or dew-point pressure of a composition at a temperature, or bubble- or dew-point temperature at a pressure (cubic EOS).
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_saturation_pressure) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_saturation_pressure) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_saturation_pressure)
 
 ### Parameters
 
@@ -434,6 +446,8 @@ Flash a composition through a separator train to stock-tank: GOR, oil density, s
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.flash_to_surface) · [TypeScript](../typescript/api/classes/GraphSolve.md#flash_to_surface) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.flash_to_surface)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -496,6 +510,8 @@ Two-phase P-T envelope (dew/bubble locus + critical point) of a composition (Pen
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.generate_phase_envelope) · [TypeScript](../typescript/api/classes/GraphSolve.md#generate_phase_envelope) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.generate_phase_envelope)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -555,6 +571,8 @@ Two-phase P-T envelope (dew/bubble locus + critical point) of a composition (Pen
 EOS flash of a composition (Peng-Robinson default, SRK, or GERG-2008 for single-phase gas): PT, PH or PS; phase split, K-values, phase densities, and optionally each phase's viscosity, enthalpy, entropy and heat capacities. Pressure in MPa.
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_eos_flash) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_eos_flash) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_eos_flash)
 
 ### Parameters
 
@@ -629,6 +647,8 @@ EOS flash of a composition (Peng-Robinson default, SRK, or GERG-2008 for single-
 Steady-state compositional flowsheet of Source, Separator, Mixer, Splitter and Sink nodes (no heaters or compressors), with recycle loops.
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_process_graph) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_process_graph) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_process_graph)
 
 ### Parameters
 
@@ -976,6 +996,8 @@ Steady-state compositional flowsheet of Source, Separator, Mixer, Splitter and S
 Regress MPFM allocation parameters against measured observation rows (inverse of calculate_mpfm_allocation).
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.tune_mpfm_allocation) · [TypeScript](../typescript/api/classes/GraphSolve.md#tune_mpfm_allocation) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.tune_mpfm_allocation)
 
 ### Parameters
 

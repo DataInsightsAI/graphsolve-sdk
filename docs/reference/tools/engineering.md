@@ -8,6 +8,8 @@ API RP 14E erosional velocity limit (1.22 C / sqrt(rho_mix) in SI), the actual m
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_erosional_velocity) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_erosional_velocity) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_erosional_velocity)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -82,6 +84,8 @@ API RP 14E erosional velocity limit (1.22 C / sqrt(rho_mix) in SI), the actual m
 Hydrate formation temperature at a given pressure and gas gravity from the Towler-Mokhatab screening correlation; H2S and CO2 inputs are echoed, not applied.
 
 **Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_hydrate_temperature) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_hydrate_temperature) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_hydrate_temperature)
 
 ### Parameters
 

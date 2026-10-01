@@ -8,6 +8,8 @@ Internal CO2/H2S corrosion rate over three models (de Waard-Lotz, sour with the 
 
 **Price:** Costs 2 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_corrosion_rate) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_corrosion_rate) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_corrosion_rate)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -107,6 +109,8 @@ Wax deposition rate on a cold wall from the subcooling and the wax solubility gr
 
 **Price:** Costs 2 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_wax_deposition_rate) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_wax_deposition_rate) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_wax_deposition_rate)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -192,6 +196,8 @@ Wax deposition rate on a cold wall from the subcooling and the wax solubility gr
 Hydrate, corrosion and erosion screening along a whole line, each reporting the controlling sample — index, length, pressure and temperature — not just a worst-case number.
 
 **Price:** Costs 8 credits, plus 1 per 250 ms beyond the first 4 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.evaluate_flow_assurance_profile) · [TypeScript](../typescript/api/classes/GraphSolve.md#evaluate_flow_assurance_profile) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.evaluate_flow_assurance_profile)
 
 ### Parameters
 
@@ -329,6 +335,8 @@ The model vocabularies the flow-assurance tools accept — hydrate, wax, asphalt
 
 **Price:** Free.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.list_flow_assurance_models) · [TypeScript](../typescript/api/classes/GraphSolve.md#list_flow_assurance_models) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.list_flow_assurance_models)
+
 ### Parameters
 
 This tool takes no arguments.
@@ -373,6 +381,8 @@ This tool takes no arguments.
 How much CO2 and H2S is dissolved in the produced water, and the in-situ pH that leaves — the brine pH the corrosion models should consume instead of a condensed-water estimate.
 
 **Price:** Costs 2 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.partition_acid_gas_in_water) · [TypeScript](../typescript/api/classes/GraphSolve.md#partition_acid_gas_in_water) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.partition_acid_gas_in_water)
 
 ### Parameters
 
@@ -458,6 +468,8 @@ De Boer (1995) asphaltene-onset screening from in-situ undersaturation and live-
 
 **Price:** Costs 2 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.screen_asphaltene_risk) · [TypeScript](../typescript/api/classes/GraphSolve.md#screen_asphaltene_risk) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.screen_asphaltene_risk)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -518,6 +530,8 @@ De Boer (1995) asphaltene-onset screening from in-situ undersaturation and live-
 Hydrate formation temperature and margin at a live state, over four models (Towler-Mokhatab screening or vdW-Platteeuw sI / sII / combined), with Hammerschmidt inhibitor depression.
 
 **Price:** Costs 2 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.screen_hydrate_risk) · [TypeScript](../typescript/api/classes/GraphSolve.md#screen_hydrate_risk) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.screen_hydrate_risk)
 
 ### Parameters
 
@@ -595,6 +609,8 @@ Turner critical-velocity screen for gas-well liquid loading: critical velocity, 
 
 **Price:** Costs 2 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.screen_liquid_loading) · [TypeScript](../typescript/api/classes/GraphSolve.md#screen_liquid_loading) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.screen_liquid_loading)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -659,6 +675,8 @@ Turner critical-velocity screen for gas-well liquid loading: critical velocity, 
 Mineral-scale saturation indices from a produced-water ion analysis — calcite, aragonite, siderite, barite, celestite, gypsum, anhydrite and halite — with the precipitable mass and the limiting ion.
 
 **Price:** Costs 2 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.screen_scale_risk) · [TypeScript](../typescript/api/classes/GraphSolve.md#screen_scale_risk) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.screen_scale_risk)
 
 ### Parameters
 
@@ -751,6 +769,8 @@ Mineral-scale saturation indices from a produced-water ion analysis — calcite,
 Wax appearance temperature and margin over three tiers: a C7+ screening correlation, the Won multi-solid SLE, or the non-ideal SLE flash with per-component solid fractions, measured melting data and the solubility gradient for the deposition rate.
 
 **Price:** Costs 2 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.screen_wax_risk) · [TypeScript](../typescript/api/classes/GraphSolve.md#screen_wax_risk) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.screen_wax_risk)
 
 ### Parameters
 

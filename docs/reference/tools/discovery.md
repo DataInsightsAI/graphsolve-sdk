@@ -8,6 +8,8 @@ Critical properties (Tc, Pc in MPa, omega, MW) of a single EOS component by data
 
 **Price:** Free.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.get_eos_component) · [TypeScript](../typescript/api/classes/GraphSolve.md#get_eos_component) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.get_eos_component)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -60,6 +62,8 @@ Critical properties (Tc, Pc in MPa, omega, MW) of a single EOS component by data
 List the available correlations, optionally filtered by category.
 
 **Price:** Free.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.list_correlations) · [TypeScript](../typescript/api/classes/GraphSolve.md#list_correlations) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.list_correlations)
 
 ### Parameters
 
@@ -114,6 +118,8 @@ List the network edge types by name (no_pressure_loss, pipe, choke, compressor, 
 
 **Price:** Free.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.list_edge_types) · [TypeScript](../typescript/api/classes/GraphSolve.md#list_edge_types) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.list_edge_types)
+
 ### Parameters
 
 This tool takes no arguments.
@@ -158,6 +164,8 @@ This tool takes no arguments.
 Peng-Robinson binary interaction parameters for a component.
 
 **Price:** Free.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.list_eos_binary_interactions) · [TypeScript](../typescript/api/classes/GraphSolve.md#list_eos_binary_interactions) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.list_eos_binary_interactions)
 
 ### Parameters
 
@@ -212,6 +220,8 @@ List the component names in the built-in equation-of-state database and the shor
 
 **Price:** Free.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.list_eos_components) · [TypeScript](../typescript/api/classes/GraphSolve.md#list_eos_components) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.list_eos_components)
+
 ### Parameters
 
 This tool takes no arguments.
@@ -257,6 +267,8 @@ List the black-oil fluid types (oil, gas, water): configuration fields, correlat
 
 **Price:** Free.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.list_fluid_types) · [TypeScript](../typescript/api/classes/GraphSolve.md#list_fluid_types) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.list_fluid_types)
+
 ### Parameters
 
 This tool takes no arguments.
@@ -301,6 +313,8 @@ This tool takes no arguments.
 List the network node types by name (fixed_rate_source, fixed_pressure_source, pressure_dependent_source, network_node, fixed_pressure_sink, fixed_rate_sink) and their fields.
 
 **Price:** Free.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.list_node_types) · [TypeScript](../typescript/api/classes/GraphSolve.md#list_node_types) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.list_node_types)
 
 ### Parameters
 

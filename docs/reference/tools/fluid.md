@@ -8,6 +8,8 @@ Black-oil PVT properties (Bo, Rs, viscosity, density, Z) of oil / gas / water at
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_fluid_properties) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_fluid_properties) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_fluid_properties)
+
 ### Parameters
 
 | Name | Type | Required | Description |

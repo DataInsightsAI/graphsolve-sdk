@@ -8,6 +8,8 @@ Fit A and B of the fetkovich_ab oil deliverability equation q = A·(pr − psat)
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.match_fetkovich_ab) · [TypeScript](../typescript/api/classes/GraphSolve.md#match_fetkovich_ab) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.match_fetkovich_ab)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -171,6 +173,8 @@ Fit A and B of the fetkovich_ab oil deliverability equation q = A·(pr − psat)
 Fit A and B of the forchheimer_ab gas deliverability equation pr² − pwf² = A·q + B·q² to test points.
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.match_forchheimer_ab) · [TypeScript](../typescript/api/classes/GraphSolve.md#match_forchheimer_ab) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.match_forchheimer_ab)
 
 ### Parameters
 
@@ -336,6 +340,8 @@ Unified matching dispatcher: fit productivity_index / skin / forchheimer_ab / fe
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.match_parameters) · [TypeScript](../typescript/api/classes/GraphSolve.md#match_parameters) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.match_parameters)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -485,6 +491,8 @@ Unified matching dispatcher: fit productivity_index / skin / forchheimer_ab / fe
 Fit the pi model's productivity index to observed (oil rate, flowing-BHP) test points.
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.match_productivity_index) · [TypeScript](../typescript/api/classes/GraphSolve.md#match_productivity_index) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.match_productivity_index)
 
 ### Parameters
 
@@ -652,6 +660,8 @@ Fit the pi model's productivity index to observed (oil rate, flowing-BHP) test p
 Fit the mechanical skin of a darcy or fetkovich model to observed (oil rate, flowing-BHP) test points.
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.match_skin) · [TypeScript](../typescript/api/classes/GraphSolve.md#match_skin) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.match_skin)
 
 ### Parameters
 
@@ -853,6 +863,8 @@ Rate-transient-analysis diagnostics (Blasingame, Agarwal-Gardner, Bourdet) with 
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.rta_diagnostics) · [TypeScript](../typescript/api/classes/GraphSolve.md#rta_diagnostics) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.rta_diagnostics)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -1044,6 +1056,8 @@ Compute the flowing-BHP history from a rate history (transient superposition).
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.transient_bhp_history) · [TypeScript](../typescript/api/classes/GraphSolve.md#transient_bhp_history) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.transient_bhp_history)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -1225,6 +1239,8 @@ Compute the flowing-BHP history from a rate history (transient superposition).
 Compute the rate history from a pressure history (transient superposition).
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.transient_rate_history) · [TypeScript](../typescript/api/classes/GraphSolve.md#transient_rate_history) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.transient_rate_history)
 
 ### Parameters
 

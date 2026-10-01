@@ -8,6 +8,8 @@ Operating point = IPR intersect VLP for one well and one tubing run. Generates b
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_nodal_analysis) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_nodal_analysis) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_nodal_analysis)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -144,6 +146,8 @@ Inflow performance relationship (IPR) curve for one well; real physics per point
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 2 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.generate_ipr_curve) · [TypeScript](../typescript/api/classes/GraphSolve.md#generate_ipr_curve) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.generate_ipr_curve)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -254,6 +258,8 @@ Inflow performance relationship (IPR) curve for one well; real physics per point
 Dimensionless transient type-curve surface (pD/qD, Bourdet derivative) for a transient ipr_model, with the dimensionless groups derived from the geometry.
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.generate_type_curve) · [TypeScript](../typescript/api/classes/GraphSolve.md#generate_type_curve) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.generate_type_curve)
 
 ### Parameters
 
@@ -406,6 +412,8 @@ Dimensionless transient type-curve surface (pD/qD, Bourdet derivative) for a tra
 Nodal analysis of one well inside a network: IPR sweep, VLP by full network solves, their operating point, and optional sensitivity overlays.
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_nodal_study) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_nodal_study) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_nodal_study)
 
 ### Parameters
 

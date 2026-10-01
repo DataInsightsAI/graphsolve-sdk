@@ -8,6 +8,8 @@ Aggregate analog wells into a probabilistic type well: P10/P50/P90 EUR, probabil
 
 **Price:** Costs 2 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.aggregate_type_well) · [TypeScript](../typescript/api/classes/GraphSolve.md#aggregate_type_well) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.aggregate_type_well)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -60,6 +62,8 @@ Aggregate analog wells into a probabilistic type well: P10/P50/P90 EUR, probabil
 Straight-line material-balance diagnostics: gas p/Z → OGIP, or Havlena-Odeh F-vs-Et → STOIIP/GIIP, with R² and drive-support intercept.
 
 **Price:** Costs 2 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.analyze_material_balance) · [TypeScript](../typescript/api/classes/GraphSolve.md#analyze_material_balance) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.analyze_material_balance)
 
 ### Parameters
 
@@ -114,6 +118,8 @@ Analytical aquifer water influx We over a pressure history: Fetkovich (PSS), Car
 
 **Price:** Costs 2 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_aquifer_influx) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_aquifer_influx) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_aquifer_influx)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -166,6 +172,8 @@ Analytical aquifer water influx We over a pressure history: Fetkovich (PSS), Car
 Forward OOIP / OGIP from area·thickness·NTG·φ·(1−Sw) ÷ FVF; scalar or per-realisation arrays, composes with generate_samples / compute_statistics for probabilistic in-place volumes.
 
 **Price:** Costs 2 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_volumetrics) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_volumetrics) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_volumetrics)
 
 ### Parameters
 
@@ -220,6 +228,8 @@ Summary statistics (mean/std, percentiles, histogram, CDF) over labelled output 
 
 **Price:** Costs 2 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.compute_statistics) · [TypeScript](../typescript/api/classes/GraphSolve.md#compute_statistics) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.compute_statistics)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -272,6 +282,8 @@ Summary statistics (mean/std, percentiles, histogram, CDF) over labelled output 
 History-match a decline model (Arps / mod-hyperbolic / Duong / SEPD / PLE) to a time/rate history with optional outlier rejection; omit kind to auto-select by R².
 
 **Price:** Costs 2 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.fit_decline) · [TypeScript](../typescript/api/classes/GraphSolve.md#fit_decline) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.fit_decline)
 
 ### Parameters
 
@@ -326,6 +338,8 @@ Generate a decline curve (rate + cumulative) from known parameters: Arps, modifi
 
 **Price:** Costs 2 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.generate_decline) · [TypeScript](../typescript/api/classes/GraphSolve.md#generate_decline) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.generate_decline)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -379,6 +393,8 @@ Draw Monte-Carlo / LHS / Sobol samples from named distributions (Normal/Uniform/
 
 **Price:** Costs 5 credits, plus 1 per 500 ms beyond the first 3 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.generate_samples) · [TypeScript](../typescript/api/classes/GraphSolve.md#generate_samples) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.generate_samples)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -431,6 +447,8 @@ Draw Monte-Carlo / LHS / Sobol samples from named distributions (Normal/Uniform/
 Time-series production forecast: march a network through time, solving or optimising each step with decline curves, scheduled events and transient-IPR wells; returns per-timestep rates and cumulatives.
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_forecast) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_forecast) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_forecast)
 
 ### Parameters
 
@@ -971,6 +989,8 @@ Tank material balance over one or more reservoir zones (STOIIP/GIIP, cumulative 
 
 **Price:** Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_material_balance) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_material_balance) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_material_balance)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -1191,6 +1211,8 @@ Tank material balance over one or more reservoir zones (STOIIP/GIIP, cumulative 
 Sensitivity / parametric study over a network (single-variable sweep, tornado, two-factor grid, Monte Carlo, envelope map); returns every run plus the study's summary.
 
 **Price:** Costs 100 credits, plus 1 per 100 ms beyond the first 10 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_parametric_study) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_parametric_study) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_parametric_study)
 
 ### Parameters
 

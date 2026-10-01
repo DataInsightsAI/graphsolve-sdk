@@ -8,6 +8,8 @@ Multiphase pressure gradient at one point in a pipe using a chosen correlation. 
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_pressure_drop) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_pressure_drop) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_pressure_drop)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -92,6 +94,8 @@ Multiphase pressure gradient at one point in a pipe using a chosen correlation. 
 Run every multiphase pressure-drop correlation (or a subset) on one segment and compare the predicted gradients.
 
 **Price:** Costs 3 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.compare_pressure_drop_correlations) · [TypeScript](../typescript/api/classes/GraphSolve.md#compare_pressure_drop_correlations) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.compare_pressure_drop_correlations)
 
 ### Parameters
 

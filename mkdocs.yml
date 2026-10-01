@@ -78,6 +78,8 @@ nav:
   - Reference:
       - Tools: reference/tools/
       - Python client: reference/python.md
-      - TypeScript client: reference/typescript.md
+      - TypeScript client:
+          - reference/typescript/index.md
+          - API: reference/typescript/api/
       - Rust client: reference/rust.md
       - HTTP API: reference/http.md

@@ -8,6 +8,8 @@ Watercut / GOR / phase fractions from volumetric phase rates (any flow-rate unit
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_phase_cuts) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_phase_cuts) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_phase_cuts)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -71,6 +73,8 @@ Watercut / GOR / phase fractions from volumetric phase rates (any flow-rate unit
 Convert a value between units (pressure, rate, temperature, length, area, ...).
 
 **Price:** Free.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.convert_units) · [TypeScript](../typescript/api/classes/GraphSolve.md#convert_units) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.convert_units)
 
 ### Parameters
 

@@ -8,6 +8,8 @@ March pressure and temperature along a single straight pipe (one diameter, lengt
 
 **Price:** Costs 3 credits.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_pipe_traverse) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_pipe_traverse) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_pipe_traverse)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -101,6 +103,8 @@ March pressure and temperature along a single straight pipe (one diameter, lengt
 Walk a multi-segment pipe with each correlation and compare the predicted outlet pressure.
 
 **Price:** Costs 3 credits.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.compare_pipeline_correlations) · [TypeScript](../typescript/api/classes/GraphSolve.md#compare_pipeline_correlations) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.compare_pipeline_correlations)
 
 ### Parameters
 

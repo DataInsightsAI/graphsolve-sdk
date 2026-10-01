@@ -8,6 +8,8 @@ Which of the three transient schemes to use, what each carries, and the conventi
 
 **Price:** Free.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.list_transient_solvers) · [TypeScript](../typescript/api/classes/GraphSolve.md#list_transient_solvers) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.list_transient_solvers)
+
 ### Parameters
 
 This tool takes no arguments.
@@ -52,6 +54,8 @@ This tool takes no arguments.
 Transient multiphase pipe flow, fully-implicit four-field two-fluid (Graphsolve-Field): for severe slugging and countercurrent flow.
 
 **Price:** Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_transient_field) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_transient_field) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_transient_field)
 
 ### Parameters
 
@@ -237,6 +241,8 @@ Transient multiphase pipe flow, fully-implicit four-field two-fluid (Graphsolve-
 Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the general-purpose scheme, carrying temperature, the oil/water split and salinity.
 
 **Price:** Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_transient_flux) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_transient_flux) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_transient_flux)
 
 ### Parameters
 
@@ -710,6 +716,8 @@ Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the 
 Transient multiphase pipe flow, explicit Godunov/Rusanov drift flux (Graphsolve-Wave): the only scheme that resolves pressure waves.
 
 **Price:** Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.run_transient_wave) · [TypeScript](../typescript/api/classes/GraphSolve.md#run_transient_wave) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.run_transient_wave)
 
 ### Parameters
 

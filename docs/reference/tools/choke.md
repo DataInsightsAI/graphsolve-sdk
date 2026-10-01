@@ -8,6 +8,8 @@ Pressure drop across a choke of known diameter at given rates (Sachdeva multipha
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_choke_pressure_drop) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_choke_pressure_drop) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_choke_pressure_drop)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -89,6 +91,8 @@ Size a choke: find the bean diameter that gives a target downstream pressure at 
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_choke_size) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_choke_size) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_choke_size)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -169,6 +173,8 @@ Size a choke: find the bean diameter that gives a target downstream pressure at 
 Find the rates a fixed choke passes for a given pressure drop, holding a phase or ratio (watercut/GOR/WGR/CGR) fixed.
 
 **Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_rate_from_choke) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_rate_from_choke) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_rate_from_choke)
 
 ### Parameters
 

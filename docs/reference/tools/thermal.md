@@ -8,6 +8,8 @@ Heater/cooler on the network edge's energy balance, in fixed_duty, fixed_outlet_
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_heater_cooler) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_heater_cooler) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_heater_cooler)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -107,6 +109,8 @@ Outlet temperature after a constant-enthalpy (Joule-Thomson) expansion to a lowe
 
 **Price:** Costs 1 credit.
 
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_isenthalpic_temperature) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_isenthalpic_temperature) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_isenthalpic_temperature)
+
 ### Parameters
 
 | Name | Type | Required | Description |
@@ -180,6 +184,8 @@ Outlet temperature after a constant-enthalpy (Joule-Thomson) expansion to a lowe
 Joule-Thomson throttle valve: outlet T after an isenthalpic pressure drop.
 
 **Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_jt_valve) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_jt_valve) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_jt_valve)
 
 ### Parameters
 
