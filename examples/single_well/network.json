@@ -1,0 +1,163 @@
+{
+ "format": "model",
+ "name": "W-1 single well",
+ "elements": [
+  {
+   "group": "nodes",
+   "data": {
+    "id": "reservoir",
+    "label": "Reservoir",
+    "node_type": "pressure_dependent_source",
+    "source_sink_data": {
+     "fluid_id": "w1-oil",
+     "reservoir_props_id": "w1-inflow",
+     "boundary_pressure": 25.0,
+     "inlet_temperature": 360.0,
+     "water_cut": 20.0,
+     "dissolved_gas_ratio": 120.0
+    }
+   }
+  },
+  {
+   "group": "nodes",
+   "data": {
+    "id": "bottomhole",
+    "label": "Bottomhole",
+    "node_type": "network_node"
+   }
+  },
+  {
+   "group": "nodes",
+   "data": {
+    "id": "wellhead",
+    "label": "Wellhead",
+    "node_type": "network_node"
+   }
+  },
+  {
+   "group": "nodes",
+   "data": {
+    "id": "choke-outlet",
+    "label": "Choke outlet",
+    "node_type": "network_node"
+   }
+  },
+  {
+   "group": "nodes",
+   "data": {
+    "id": "separator",
+    "label": "Separator",
+    "node_type": "fixed_pressure_sink",
+    "source_sink_data": {
+     "boundary_pressure": 2.0
+    }
+   }
+  },
+  {
+   "group": "edges",
+   "data": {
+    "id": "inflow",
+    "label": "Sandface",
+    "source": "reservoir",
+    "target": "bottomhole",
+    "edge_type": "no_pressure_loss"
+   }
+  },
+  {
+   "group": "edges",
+   "data": {
+    "id": "tubing",
+    "label": "Tubing",
+    "source": "bottomhole",
+    "target": "wellhead",
+    "edge_type": "pipe",
+    "pipe_data": {
+     "correlation": "Hagedorn-Slug",
+     "pipe_geometry": [
+      {
+       "segment_type": "pipe",
+       "pipe_length": 2500.0,
+       "pipe_angle": 0.0,
+       "pipe_diameter": 0.1,
+       "pipe_roughness": 1.5e-05,
+       "surrounding_temperature": 330.0,
+       "heat_transfer_coefficient": 10.0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "group": "edges",
+   "data": {
+    "id": "choke",
+    "label": "Production choke",
+    "source": "wellhead",
+    "target": "choke-outlet",
+    "edge_type": "choke",
+    "choke_data": {
+     "choke_correlation": "simple_metric",
+     "choke_diameter": 0.025,
+     "choke_discharge_coefficient": 0.8,
+     "slip_model": "hydro"
+    }
+   }
+  },
+  {
+   "group": "edges",
+   "data": {
+    "id": "flowline",
+    "label": "Flowline",
+    "source": "choke-outlet",
+    "target": "separator",
+    "edge_type": "pipe",
+    "pipe_data": {
+     "correlation": "Beggs-Brill",
+     "pipe_geometry": [
+      {
+       "segment_type": "pipe",
+       "pipe_length": 3000.0,
+       "pipe_angle": 90.0,
+       "pipe_diameter": 0.15,
+       "pipe_roughness": 4.5e-05,
+       "surrounding_temperature": 288.0,
+       "heat_transfer_coefficient": 5.0
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "fluids": [
+  {
+   "id": "w1-oil",
+   "name": "W-1 black oil",
+   "model_type": "black_oil",
+   "model": {
+    "fluid_type": "oil",
+    "reference_oil_density": 850.0,
+    "reference_gas_mw": 20.3,
+    "dissolved_gas_ratio": 120.0,
+    "saturation_pressure_correlation": "standing",
+    "oil_viscosity_correlation": "beggs",
+    "salinity": 35000.0
+   }
+  }
+ ],
+ "sources": [
+  {
+   "inflow_model_id": "w1-inflow",
+   "ipr_model": "pi",
+   "reservoir_pressure": 25.0,
+   "reservoir_temperature": 360.0,
+   "watercut": 20.0,
+   "reservoir_properties": {
+    "productivity_index": 250.0
+   }
+  }
+ ],
+ "solve_parameters": {
+  "max_n_iter": 200,
+  "tolerance": 0.0001
+ }
+}

@@ -1,0 +1,85 @@
+site_name: GraphSolve SDK
+site_description: Python, TypeScript and Rust clients for the GraphSolve engine API
+site_url: https://datainsightsai.github.io/graphsolve-sdk/
+repo_url: https://github.com/DataInsightsAI/graphsolve-sdk
+repo_name: DataInsightsAI/graphsolve-sdk
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - content.tabs.link
+    - navigation.indexes
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: { icon: material/weather-night, name: Dark mode }
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: { icon: material/weather-sunny, name: Light mode }
+
+# Build inputs that live beside the pages but are not pages.
+exclude_docs: |
+  hooks.py
+  requirements.txt
+
+# Copies the API specification into the built site for the HTTP reference page.
+hooks:
+  - docs/hooks.py
+
+plugins:
+  - search
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [python/src]
+          options:
+            show_source: false
+            show_root_heading: true
+            inherited_members: true
+            members_order: alphabetical
+            docstring_style: google
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Installation: getting-started/installation.md
+      - Authentication: getting-started/authentication.md
+      - Your first call: getting-started/first-call.md
+  - Guides:
+      - Units: guides/units.md
+      - Network models: guides/network-models.md
+      - Billing and credits: guides/billing.md
+      - Errors and retries: guides/errors.md
+      - Long-running jobs: guides/jobs.md
+  - Examples:
+      - A single oil well: examples/single-well.md
+  - Reference:
+      - Tools: reference/tools/
+      - Python client: reference/python.md
+      - TypeScript client:
+          - reference/typescript/index.md
+          - API: reference/typescript/api/
+      - Rust client: reference/rust.md
+      - HTTP API: reference/http.md
