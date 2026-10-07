@@ -466,7 +466,7 @@ def test_every_tool_in_the_spec_has_a_method():
     }
     missing = {t for t in tools if not callable(getattr(GeneratedMethods, t, None))}
     assert not missing, f"{len(missing)} tools have no method: {sorted(missing)[:5]}"
-    assert len(tools) == 98
+    assert len(tools) == 101
 
 
 def test_a_generated_method_forwards_to_the_named_tool():
@@ -485,6 +485,71 @@ def test_a_generated_method_forwards_to_the_named_tool():
     )
     assert seen["path"] == "/v1/tools/calculate_compressor"
     assert seen["body"]["inlet_pressure"] == 5.0
+
+
+def test_nested_machine_and_composition_objects_pass_through_unchanged():
+    """A tagged-union machine block and a composition block are sent as the
+    objects given, and an omitted black-oil fluid is left out."""
+    seen = {}
+
+    def handler(request):
+        seen["path"] = request.url.path
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json=envelope(result={}))
+
+    machine = {
+        "kind": "centrifugal_map",
+        "shaft_speed": 1100.0,
+        "speed_lines": [
+            {
+                "shaft_speed": 1000.0,
+                "head_curve": {"x": [0.2, 0.35], "y": [85000.0, 75000.0]},
+                "efficiency_curve": {"x": [0.2, 0.35], "y": [0.74, 0.80]},
+            }
+        ],
+    }
+    composition = {
+        "component_names": ["methane", "ethane"],
+        "mole_fractions": [0.9, 0.1],
+        "mass_rate": 10.0,
+    }
+    client(with_token(handler)[0]).calculate_turbo_machine(
+        inlet_pressure=4.0,
+        inlet_temperature=300.0,
+        turbo_machine=machine,
+        composition=composition,
+    )
+    assert seen["path"] == "/v1/tools/calculate_turbo_machine"
+    assert seen["body"]["turbo_machine"] == machine
+    assert seen["body"]["composition"] == composition
+    assert "fluid" not in seen["body"]
+
+
+def test_the_compression_train_and_calibration_tools_post_to_their_paths():
+    paths = []
+
+    def handler(request):
+        paths.append(request.url.path)
+        return httpx.Response(200, json=envelope(result={}))
+
+    gs = client(with_token(handler)[0])
+    gs.calculate_compression_train(
+        inlet_pressure=2.0,
+        inlet_temperature=360.0,
+        stages=[{"turbo_machine": {"kind": "centrifugal_simple",
+                                   "compressor_pressure_ratio": 2.0,
+                                   "polytropic_efficiency": 0.78}}],
+        composition={"component_names": ["methane"], "mole_fractions": [1.0],
+                     "mass_rate": 5.0},
+    )
+    gs.analyse_turbo_performance(
+        points=[{"inlet_pressure": 4.0, "inlet_temperature": 300.0,
+                 "outlet_pressure": 8.0, "outlet_temperature": 364.0}],
+    )
+    assert paths == [
+        "/v1/tools/calculate_compression_train",
+        "/v1/tools/analyse_turbo_performance",
+    ]
 
 
 def test_omitted_optional_arguments_are_absent_not_null():

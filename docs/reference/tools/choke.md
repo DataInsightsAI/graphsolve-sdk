@@ -6,7 +6,7 @@
 
 Pressure drop across a choke of known diameter at given rates (Sachdeva multiphase model, critical/subcritical).
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_choke_pressure_drop) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_choke_pressure_drop) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_choke_pressure_drop)
 
@@ -15,21 +15,22 @@ Pressure drop across a choke of known diameter at given rates (Sachdeva multipha
 | Name | Type | Required | Description |
 |---|---|---|---|
 | `choke_diameter` | number | yes | Choke diameter in meters |
+| `composition` | object | no | Compositional stream in place of the black-oil rates and properties: components, mole fractions, a cubic equation of state and `mass_rate` (kg/s). The choke is then the compositional choke edge's: the homogeneous orifice, or Sachdeva's model for a two-phase stream, with no pressure recovery, so `pipe_diameter_ratio` and `perry_multiplier` do not apply. |
 | `discharge_coefficient` | number | no | Choke discharge coefficient Cd, in (0, 1] (default: 0.68441971). The mass rate at a given pressure ratio is proportional to Cd. |
 | `dissolved_gas_ratio` | number | no | Dissolved gas-oil ratio in Sm3/Sm3 (default: 90) |
 | `gas_mw` | number | no | Gas molecular weight in g/mol (default: 19.83) |
-| `gas_rate` | number | yes | Free gas rate in Sm3/day at standard conditions. The oil carries oil_rate × dissolved_gas_ratio in solution on top of it, so subtract that from a total produced gas rate. |
+| `gas_rate` | number | no | Free gas rate in Sm3/day at standard conditions. The oil carries oil_rate × dissolved_gas_ratio in solution on top of it, so subtract that from a total produced gas rate. Default `0.0`. |
 | `inlet_pressure` | number | yes | Inlet pressure in MPa |
 | `inlet_temperature` | number | yes | Inlet temperature in Kelvin |
 | `oil_density` | number | no | Oil density in kg/m3 (default: 850) |
-| `oil_rate` | number | yes | Oil rate in Sm3/day |
+| `oil_rate` | number | no | Oil rate in Sm3/day Default `0.0`. |
 | `perry_multiplier` | number | no | Exponent m of the pressure recovery downstream of the vena contracta, p_out = p_in - (p_in - p_vc)(1 - (d/D)^m) with p_vc the vena-contracta pressure; positive (default: 2.99996817) |
 | `pipe_diameter_ratio` | number | no | Upstream pipe inner diameter divided by the choke diameter, D/d, greater than 1 (default: 5.46554744). Sets how much of the pressure drop to the vena contracta is recovered downstream. |
 | `slip_model` | string | no | Slip model (default: hydro) |
-| `water_rate` | number | yes | Water rate in Sm3/day |
+| `water_rate` | number | no | Water rate in Sm3/day Default `0.0`. |
 | `water_salinity` | number | no | Water salinity in ppm (default: 0) |
 
-### Example: 25 mm choke
+### Example: 20 mm choke on a live-oil composition
 
 === "Python"
 
@@ -38,12 +39,15 @@ Pressure drop across a choke of known diameter at given rates (Sachdeva multipha
 
     gs = GraphSolve()
     response = gs.calculate_choke_pressure_drop(
-        choke_diameter=0.025,
-        gas_rate=100000,
-        inlet_pressure=25.0,
-        inlet_temperature=350.0,
-        oil_rate=500,
-        water_rate=50,
+        choke_diameter=0.02,
+        composition={
+            "component_names": ["methane", "propane", "n-decane"],
+            "mass_rate": 4.0,
+            "mole_fractions": [0.35, 0.15, 0.5]
+        },
+        discharge_coefficient=0.75,
+        inlet_pressure=10.0,
+        inlet_temperature=320.0,
     )
     print(response["result"])
     ```
@@ -55,12 +59,15 @@ Pressure drop across a choke of known diameter at given rates (Sachdeva multipha
 
     const gs = new GraphSolve();
     const response = await gs.calculate_choke_pressure_drop({
-        "choke_diameter": 0.025,
-        "gas_rate": 100000,
-        "inlet_pressure": 25.0,
-        "inlet_temperature": 350.0,
-        "oil_rate": 500,
-        "water_rate": 50
+        "choke_diameter": 0.02,
+        "composition": {
+            "component_names": ["methane", "propane", "n-decane"],
+            "mass_rate": 4.0,
+            "mole_fractions": [0.35, 0.15, 0.5]
+        },
+        "discharge_coefficient": 0.75,
+        "inlet_pressure": 10.0,
+        "inlet_temperature": 320.0
     });
     console.log(response.result);
     ```
@@ -74,12 +81,15 @@ Pressure drop across a choke of known diameter at given rates (Sachdeva multipha
     let gs = GraphSolve::new()?;
     let response = gs
         .call("calculate_choke_pressure_drop", &json!({
-            "choke_diameter": 0.025,
-            "gas_rate": 100000,
-            "inlet_pressure": 25.0,
-            "inlet_temperature": 350.0,
-            "oil_rate": 500,
-            "water_rate": 50
+            "choke_diameter": 0.02,
+            "composition": {
+                "component_names": ["methane", "propane", "n-decane"],
+                "mass_rate": 4.0,
+                "mole_fractions": [0.35, 0.15, 0.5]
+            },
+            "discharge_coefficient": 0.75,
+            "inlet_pressure": 10.0,
+            "inlet_temperature": 320.0
         }))
         .await?;
     println!("{:?}", response.result);

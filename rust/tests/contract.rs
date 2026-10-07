@@ -5,8 +5,8 @@
 use std::time::Duration;
 
 use graphsolve::{
-    CalculateCompressorParams, CalculatePressureDropParams, Error, FlowCorrelationName, GraphSolve,
-    SolveNetworkParams, TOOL_NAMES,
+    CalculateCompressorParams, CalculatePressureDropParams, CalculateTurboMachineParams, Error,
+    FlowCorrelationName, GraphSolve, SolveNetworkParams, TOOL_NAMES,
 };
 use serde_json::json;
 use wiremock::matchers::{header, method, path, query_param};
@@ -738,7 +738,7 @@ fn every_tool_in_the_spec_is_named() {
         .map(|(_, item)| item["post"]["operationId"].as_str().unwrap())
         .collect();
 
-    assert_eq!(tools.len(), 98);
+    assert_eq!(tools.len(), 101);
     for tool in tools {
         assert!(TOOL_NAMES.contains(&tool), "{tool} has no method");
     }
@@ -799,7 +799,7 @@ async fn an_unset_optional_is_absent_from_the_payload_not_null() {
             inlet_pressure: 5.0,
             inlet_temperature: 350.0,
             pressure_ratio: 2.0,
-            fluid: serde_json::json!({ "gas_rate": 500_000, "gas_mw": 18.5 }),
+            fluid: Some(serde_json::json!({ "gas_rate": 500_000, "gas_mw": 18.5 })),
             ..Default::default()
         })
         .await
@@ -818,6 +818,56 @@ async fn an_unset_optional_is_absent_from_the_payload_not_null() {
         "unset optional was sent: {body}"
     );
     assert!(!object.contains_key("polytropic_efficiency"));
+}
+
+#[tokio::test]
+async fn nested_machine_and_composition_blocks_pass_through_unchanged() {
+    // A tagged-union machine block and a composition block are sent as given,
+    // and an unset black-oil fluid is left out.
+    let server = MockServer::start().await;
+    mount_token(&server, "tok-1", 3600).await;
+    mount_tool(
+        &server,
+        "calculate_turbo_machine",
+        ResponseTemplate::new(200).set_body_json(envelope("success", 1)),
+    )
+    .await;
+
+    let machine = json!({
+        "kind": "centrifugal_map",
+        "shaft_speed": 1100.0,
+        "speed_lines": [{
+            "shaft_speed": 1000.0,
+            "head_curve": { "x": [0.2, 0.35], "y": [85000.0, 75000.0] },
+            "efficiency_curve": { "x": [0.2, 0.35], "y": [0.74, 0.8] }
+        }]
+    });
+    let composition = json!({
+        "component_names": ["methane", "ethane"],
+        "mole_fractions": [0.9, 0.1],
+        "mass_rate": 10.0
+    });
+    client(&server)
+        .calculate_turbo_machine(CalculateTurboMachineParams {
+            inlet_pressure: 4.0,
+            inlet_temperature: 300.0,
+            turbo_machine: machine.clone(),
+            composition: Some(composition.clone()),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let requests = server.received_requests().await.unwrap();
+    let body: serde_json::Value = requests
+        .iter()
+        .find(|r| r.url.path() == "/v1/tools/calculate_turbo_machine")
+        .expect("no tool call")
+        .body_json()
+        .unwrap();
+    assert_eq!(body["turbo_machine"], machine);
+    assert_eq!(body["composition"], composition);
+    assert!(!body.as_object().unwrap().contains_key("fluid"));
 }
 
 #[tokio::test]

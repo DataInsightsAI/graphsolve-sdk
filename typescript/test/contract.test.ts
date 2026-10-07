@@ -506,7 +506,7 @@ describe("the generated surface", () => {
     const methods = GeneratedMethods.prototype as unknown as Record<string, unknown>;
     const missing = tools.filter((tool) => typeof methods[tool] !== "function");
     expect(missing).toEqual([]);
-    expect(tools).toHaveLength(98);
+    expect(tools).toHaveLength(101);
   });
 
   it("forwards to the named tool", async () => {
@@ -526,6 +526,80 @@ describe("the generated surface", () => {
     });
     expect(path).toBe("/v1/tools/calculate_compressor");
     expect(body.inlet_pressure).toBe(5.0);
+  });
+
+  it("sends nested machine and composition blocks unchanged and omits an unset fluid", async () => {
+    let path = "";
+    let body: Record<string, unknown> = {};
+    const gs = authed((url, init) => {
+      path = new URL(url).pathname;
+      body = bodyOf(init);
+      return json(200, envelope({ result: {} }));
+    });
+
+    const machine = {
+      kind: "centrifugal_map",
+      shaft_speed: 1100.0,
+      speed_lines: [
+        {
+          shaft_speed: 1000.0,
+          head_curve: { x: [0.2, 0.35], y: [85000.0, 75000.0] },
+          efficiency_curve: { x: [0.2, 0.35], y: [0.74, 0.8] },
+        },
+      ],
+    };
+    const composition = {
+      component_names: ["methane", "ethane"],
+      mole_fractions: [0.9, 0.1],
+      mass_rate: 10.0,
+    };
+    await gs.calculate_turbo_machine({
+      inlet_pressure: 4.0,
+      inlet_temperature: 300.0,
+      turbo_machine: machine,
+      composition,
+    });
+    expect(path).toBe("/v1/tools/calculate_turbo_machine");
+    expect(body.turbo_machine).toEqual(machine);
+    expect(body.composition).toEqual(composition);
+    expect("fluid" in body).toBe(false);
+  });
+
+  it("posts the compression train and calibration tools to their paths", async () => {
+    const paths: string[] = [];
+    const gs = authed((url) => {
+      paths.push(new URL(url).pathname);
+      return json(200, envelope({ result: {} }));
+    });
+
+    await gs.calculate_compression_train({
+      inlet_pressure: 2.0,
+      inlet_temperature: 360.0,
+      stages: [
+        {
+          turbo_machine: {
+            kind: "centrifugal_simple",
+            compressor_pressure_ratio: 2.0,
+            polytropic_efficiency: 0.78,
+          },
+        },
+      ],
+      composition: { component_names: ["methane"], mole_fractions: [1.0], mass_rate: 5.0 },
+    });
+    await gs.analyse_turbo_performance({
+      points: [
+        {
+          inlet_pressure: 4.0,
+          inlet_temperature: 300.0,
+          outlet_pressure: 8.0,
+          outlet_temperature: 364.0,
+        },
+      ],
+    });
+    expect(paths).toEqual([
+      "/v1/tools/calculate_compression_train",
+      "/v1/tools/analyse_turbo_performance",
+    ]);
   });
 
   it("leaves an omitted optional out of the payload rather than sending null", async () => {

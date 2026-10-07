@@ -5,8 +5,8 @@
  * Run `python emit/emit_typescript.py` after a spec change; CI fails if
  * this file and the spec disagree.
  *
- * Engine API version: 1.0.40
- * Tools: 98
+ * Engine API version: 1.0.42
+ * Tools: 101
  */
 
 import type { ToolArguments, ToolResponse } from "./types.js";
@@ -17,10 +17,12 @@ export type ToolName =
   | "adjust_composition_to_phase_ratio"
   | "aggregate_type_well"
   | "allocate_production"
+  | "analyse_turbo_performance"
   | "analyze_material_balance"
   | "calculate_aquifer_influx"
   | "calculate_choke_pressure_drop"
   | "calculate_choke_size"
+  | "calculate_compression_train"
   | "calculate_compressor"
   | "calculate_corrosion_rate"
   | "calculate_critical_point"
@@ -46,6 +48,7 @@ export type ToolName =
   | "calculate_saturation_pressure"
   | "calculate_screw_compressor"
   | "calculate_turbine"
+  | "calculate_turbo_machine"
   | "calculate_volumetrics"
   | "calculate_water_properties"
   | "calculate_wax_deposition_rate"
@@ -231,6 +234,10 @@ export type SlipModelName =
   | "baroczy"
   | "lockhart_martenelli";
 
+export type TurboModeName =
+  | "compressor"
+  | "expander";
+
 export type WaxActivityModelName =
   | "regular_solution"
   | "ideal";
@@ -270,6 +277,17 @@ export type AllocateProductionParams = {
   network_json: Record<string, unknown> | unknown[] | string;
 };
 
+export type AnalyseTurboPerformanceParams = {
+  points: Record<string, unknown>[];
+  co2_fraction?: number | null;
+  composition?: Record<string, unknown> | null;
+  gas_molecular_weight?: number | null;
+  h2s_fraction?: number | null;
+  methods?: string[] | null;
+  mode?: TurboModeName | null;
+  n2_fraction?: number | null;
+};
+
 export type AnalyzeMaterialBalanceParams = {
   analysis_json: Record<string, unknown> | unknown[] | string;
 };
@@ -280,18 +298,19 @@ export type CalculateAquiferInfluxParams = {
 
 export type CalculateChokePressureDropParams = {
   choke_diameter: number;
-  gas_rate: number;
   inlet_pressure: number;
   inlet_temperature: number;
-  oil_rate: number;
-  water_rate: number;
+  composition?: Record<string, unknown> | null;
   discharge_coefficient?: number | null;
   dissolved_gas_ratio?: number | null;
   gas_mw?: number | null;
+  gas_rate?: number;
   oil_density?: number | null;
+  oil_rate?: number;
   perry_multiplier?: number | null;
   pipe_diameter_ratio?: number | null;
   slip_model?: SlipModelName | null;
+  water_rate?: number;
   water_salinity?: number | null;
 };
 
@@ -312,12 +331,22 @@ export type CalculateChokeSizeParams = {
   water_salinity?: number | null;
 };
 
+export type CalculateCompressionTrainParams = {
+  composition: Record<string, unknown>;
+  inlet_pressure: number;
+  inlet_temperature: number;
+  stages: Record<string, unknown>[];
+};
+
 export type CalculateCompressorParams = {
-  fluid: Record<string, unknown>;
   inlet_pressure: number;
   inlet_temperature: number;
   pressure_ratio: number;
+  composition?: Record<string, unknown> | null;
+  fluid?: Record<string, unknown> | null;
+  isentropic_efficiency?: number | null;
   mechanical_efficiency?: number | null;
+  method?: string | null;
   polytropic_efficiency?: number | null;
 };
 
@@ -371,11 +400,12 @@ export type CalculateGasDewPointParams = {
 };
 
 export type CalculateHeaterCoolerParams = {
-  fluid: Record<string, unknown>;
   inlet_pressure: number;
   inlet_temperature: number;
   mode: HeaterCoolerModeName;
   approach_temperature?: number | null;
+  composition?: Record<string, unknown> | null;
+  fluid?: Record<string, unknown> | null;
   heat_duty?: number | null;
   max_duty?: number | null;
   outlet_temperature?: number | null;
@@ -392,17 +422,19 @@ export type CalculateHydrateTemperatureParams = {
 };
 
 export type CalculateIsenthalpicTemperatureParams = {
-  fluid: Record<string, unknown>;
   inlet_pressure: number;
   inlet_temperature: number;
   outlet_pressure: number;
+  composition?: Record<string, unknown> | null;
+  fluid?: Record<string, unknown> | null;
 };
 
 export type CalculateJtValveParams = {
-  fluid: Record<string, unknown>;
   inlet_pressure: number;
   inlet_temperature: number;
   pressure_drop: number;
+  composition?: Record<string, unknown> | null;
+  fluid?: Record<string, unknown> | null;
 };
 
 export type CalculateMmpParams = {
@@ -414,13 +446,15 @@ export type CalculateMpfmAllocationParams = {
 };
 
 export type CalculateMultistageCompressorParams = {
-  fluid: Record<string, unknown>;
   inlet_pressure: number;
   inlet_temperature: number;
   stages: Record<string, unknown>[];
+  composition?: Record<string, unknown> | null;
+  fluid?: Record<string, unknown> | null;
   intercool_pressure_drop?: number | null;
   intercool_temperature?: number | null;
   mechanical_efficiency?: number | null;
+  method?: string | null;
 };
 
 export type CalculateNodalAnalysisParams = {
@@ -481,11 +515,12 @@ export type CalculatePressureDropParams = {
 };
 
 export type CalculatePumpParams = {
-  fluid: Record<string, unknown>;
   inlet_pressure: number;
   inlet_temperature: number;
   centrifugal?: Record<string, unknown> | null;
+  composition?: Record<string, unknown> | null;
   efficiency?: number | null;
+  fluid?: Record<string, unknown> | null;
   head_curve?: number[][];
   mechanical_efficiency?: number | null;
   minor_loss_coefficient?: number | null;
@@ -533,10 +568,12 @@ export type CalculateReciprocatingCompressorParams = {
   swept_volume_per_rev_m3: number;
   clearance_fraction?: number | null;
   co2_fraction?: number | null;
+  composition?: Record<string, unknown> | null;
   gas_molecular_weight?: number | null;
   h2s_fraction?: number | null;
   max_pressure_ratio?: number | null;
   mechanical_efficiency?: number | null;
+  method?: string | null;
   min_pressure_ratio?: number | null;
   n2_fraction?: number | null;
   polytropic_efficiency?: number | null;
@@ -569,9 +606,11 @@ export type CalculateScrewCompressorParams = {
   inlet_temperature: number;
   shaft_speed_rev_s: number;
   co2_fraction?: number | null;
+  composition?: Record<string, unknown> | null;
   gas_molecular_weight?: number | null;
   h2s_fraction?: number | null;
   mechanical_efficiency?: number | null;
+  method?: string | null;
   n2_fraction?: number | null;
   polytropic_efficiency?: number | null;
   subtype?: string | null;
@@ -579,12 +618,26 @@ export type CalculateScrewCompressorParams = {
 };
 
 export type CalculateTurbineParams = {
-  fluid: Record<string, unknown>;
   inlet_pressure: number;
   inlet_temperature: number;
   pressure_ratio: number;
+  composition?: Record<string, unknown> | null;
+  fluid?: Record<string, unknown> | null;
+  isentropic_efficiency?: number | null;
   mechanical_efficiency?: number | null;
+  method?: string | null;
   polytropic_efficiency?: number | null;
+};
+
+export type CalculateTurboMachineParams = {
+  inlet_pressure: number;
+  inlet_temperature: number;
+  turbo_machine: Record<string, unknown>;
+  composition?: Record<string, unknown> | null;
+  discharge_pressure?: number | null;
+  fluid?: Record<string, unknown> | null;
+  mechanical_efficiency?: number | null;
+  mode?: TurboModeName | null;
 };
 
 export type CalculateVolumetricsParams = {
@@ -1003,6 +1056,19 @@ export abstract class GeneratedMethods {
   }
 
   /**
+   * Back-calculate head, efficiencies and powers from measured suction and
+   * discharge states by path method, and fit a turbo_machine map to the
+   * points.
+   *
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+   */
+  analyse_turbo_performance(
+    params: AnalyseTurboPerformanceParams,
+  ): Promise<ToolResponse> {
+    return this.call("analyse_turbo_performance", params);
+  }
+
+  /**
    * Straight-line material-balance diagnostics: gas p/Z → OGIP, or Havlena-
    * Odeh F-vs-Et → STOIIP/GIIP, with R² and drive-support intercept.
    *
@@ -1030,7 +1096,7 @@ export abstract class GeneratedMethods {
    * Pressure drop across a choke of known diameter at given rates (Sachdeva
    * multiphase model, critical/subcritical).
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_choke_pressure_drop(
     params: CalculateChokePressureDropParams,
@@ -1051,10 +1117,23 @@ export abstract class GeneratedMethods {
   }
 
   /**
+   * Compression train on a composition: per stage a turbo machine, an
+   * intercooler on the EOS enthalpy and a scrubber that removes the
+   * condensed liquid; stage and train power, duty, liquid and compositions.
+   *
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+   */
+  calculate_compression_train(
+    params: CalculateCompressionTrainParams,
+  ): Promise<ToolResponse> {
+    return this.call("calculate_compression_train", params);
+  }
+
+  /**
    * Single-stage centrifugal compressor: outlet P/T and power from inlet
    * P/T, pressure ratio, and polytropic efficiency.
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_compressor(
     params: CalculateCompressorParams,
@@ -1129,7 +1208,7 @@ export abstract class GeneratedMethods {
    * fixed_outlet_temperature, approach_temperature or ua mode; returns
    * outlet P/T and duty.
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_heater_cooler(
     params: CalculateHeaterCoolerParams,
@@ -1154,7 +1233,7 @@ export abstract class GeneratedMethods {
    * Outlet temperature after a constant-enthalpy (Joule-Thomson) expansion
    * to a lower pressure.
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_isenthalpic_temperature(
     params: CalculateIsenthalpicTemperatureParams,
@@ -1166,7 +1245,7 @@ export abstract class GeneratedMethods {
    * Joule-Thomson throttle valve: outlet T after an isenthalpic pressure
    * drop.
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_jt_valve(params: CalculateJtValveParams): Promise<ToolResponse> {
     return this.call("calculate_jt_valve", params);
@@ -1199,7 +1278,7 @@ export abstract class GeneratedMethods {
    * stage pressure ratios and overall discharge P/T, cooler duty and shaft
    * power.
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_multistage_compressor(
     params: CalculateMultistageCompressorParams,
@@ -1261,7 +1340,7 @@ export abstract class GeneratedMethods {
    * discharge P/T, head, power, NPSH, per-section operating range and the
    * ESP drive train.
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_pump(params: CalculatePumpParams): Promise<ToolResponse> {
     return this.call("calculate_pump", params);
@@ -1294,7 +1373,7 @@ export abstract class GeneratedMethods {
    * Reciprocating (positive-displacement) compressor. Mass flow is set by
    * displacement x speed x volumetric efficiency, not supplied.
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_reciprocating_compressor(
     params: CalculateReciprocatingCompressorParams,
@@ -1330,7 +1409,7 @@ export abstract class GeneratedMethods {
    * efficiencies; mass flow = volumetric efficiency x suction density x
    * displacement per revolution x shaft speed in rev/s.
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_screw_compressor(
     params: CalculateScrewCompressorParams,
@@ -1342,10 +1421,23 @@ export abstract class GeneratedMethods {
    * Single-stage centrifugal turbine/expander: outlet P/T and power
    * generated from inlet P/T and an expansion pressure ratio (0 < PR < 1).
    *
-   * Costs 1 credit.
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
    */
   calculate_turbine(params: CalculateTurbineParams): Promise<ToolResponse> {
     return this.call("calculate_turbine", params);
+  }
+
+  /**
+   * Any network turbo machine (centrifugal simple/mapped/map/multistage,
+   * axial, screw, reciprocating) at one operating point, on a GERG gas or an
+   * EOS composition, with a chosen path method.
+   *
+   * Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+   */
+  calculate_turbo_machine(
+    params: CalculateTurboMachineParams,
+  ): Promise<ToolResponse> {
+    return this.call("calculate_turbo_machine", params);
   }
 
   /**

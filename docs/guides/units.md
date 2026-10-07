@@ -37,6 +37,20 @@ of magnitude or more and still solves, answering a different question.
 of drawdown. A value entered in kSm³/day/MPa is 1000 times too small and still
 solves, as a well that barely flows.
 
+**The equipment tools' black-oil `fluid` takes Sm³/day, not kSm³/day.** On
+`calculate_compressor`, the pump, valve, heater/cooler and the other equipment
+tools, `fluid.gas_rate`, `oil_rate` and `water_rate` are Sm³/day at standard
+conditions, as each tool's reference says.
+
+**A composition's `mass_rate` is the whole stream, in kg/s.** It is not a
+standard volume rate and not per component. The mole fractions describe the
+stream; the mass rate sets how much of it flows.
+
+**Machine speeds differ by machine.** Performance-map `shaft_speed` is in rad/s,
+as on a network edge. `calculate_screw_compressor` takes `shaft_speed_rev_s` in
+revolutions per second and `calculate_reciprocating_compressor` takes
+`speed_rpm`.
+
 **A variance is σ², in the squared unit of the value.** A pressure gauge good to
 ±0.5 bar has σ = 0.05 MPa and variance `0.0025` MPa². A ±25 Sm³/Sm³ belief on
 GOR has variance `625.0`.

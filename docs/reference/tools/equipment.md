@@ -2,11 +2,341 @@
 
 # Equipment (rotating)
 
+## `analyse_turbo_performance`
+
+Back-calculate head, efficiencies and powers from measured suction and discharge states by path method, and fit a turbo_machine map to the points.
+
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.analyse_turbo_performance) · [TypeScript](../typescript/api/classes/GraphSolve.md#analyse_turbo_performance) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.analyse_turbo_performance)
+
+### Parameters
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `co2_fraction` | number | no | GERG gas CO2 mole fraction (default 0). |
+| `composition` | object | no | Compositional gas, in place of the GERG gas. |
+| `gas_molecular_weight` | number | no | GERG gas molecular weight in g/mol (default 20.279). |
+| `h2s_fraction` | number | no | GERG gas H2S mole fraction (default 0). |
+| `methods` | array | no | Path methods to compare (default ["huntington_3point"]): ideal_gas_exact, schultz, sandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point, reference_2017, reference_1985, hundseid_small_stage, improved_hundseid, sandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann. The first one fits the map. |
+| `mode` | string | no | Compressor (default) or expander. |
+| `n2_fraction` | number | no | GERG gas N2 mole fraction (default 0). |
+| `points` | array of object | yes | The measured points. |
+
+### Example: three test points, two methods, GERG gas
+
+=== "Python"
+
+    ```python
+    from graphsolve import GraphSolve
+
+    gs = GraphSolve()
+    response = gs.analyse_turbo_performance(
+        gas_molecular_weight=18.5,
+        methods=["huntington_3point", "schultz"],
+        points=[
+            {
+                "inlet_pressure": 4.0,
+                "inlet_temperature": 300.0,
+                "mass_rate": 8.0,
+                "outlet_pressure": 8.6,
+                "outlet_temperature": 372.0,
+                "shaft_power": 1180000.0
+            },
+            {
+                "inlet_pressure": 4.0,
+                "inlet_temperature": 300.0,
+                "mass_rate": 10.0,
+                "outlet_pressure": 8.0,
+                "outlet_temperature": 364.0,
+                "shaft_power": 1340000.0
+            },
+            {
+                "inlet_pressure": 4.0,
+                "inlet_temperature": 300.0,
+                "mass_rate": 12.0,
+                "outlet_pressure": 7.2,
+                "outlet_temperature": 358.0,
+                "shaft_power": 1450000.0
+            }
+        ],
+    )
+    print(response["result"])
+    ```
+
+=== "TypeScript"
+
+    ```ts
+    import { GraphSolve } from "@graphsolve/sdk";
+
+    const gs = new GraphSolve();
+    const response = await gs.analyse_turbo_performance({
+        "gas_molecular_weight": 18.5,
+        "methods": ["huntington_3point", "schultz"],
+        "points": [
+            {
+                "inlet_pressure": 4.0,
+                "inlet_temperature": 300.0,
+                "mass_rate": 8.0,
+                "outlet_pressure": 8.6,
+                "outlet_temperature": 372.0,
+                "shaft_power": 1180000.0
+            },
+            {
+                "inlet_pressure": 4.0,
+                "inlet_temperature": 300.0,
+                "mass_rate": 10.0,
+                "outlet_pressure": 8.0,
+                "outlet_temperature": 364.0,
+                "shaft_power": 1340000.0
+            },
+            {
+                "inlet_pressure": 4.0,
+                "inlet_temperature": 300.0,
+                "mass_rate": 12.0,
+                "outlet_pressure": 7.2,
+                "outlet_temperature": 358.0,
+                "shaft_power": 1450000.0
+            }
+        ]
+    });
+    console.log(response.result);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use graphsolve::GraphSolve;
+    use serde_json::json;
+
+    let gs = GraphSolve::new()?;
+    let response = gs
+        .call("analyse_turbo_performance", &json!({
+            "gas_molecular_weight": 18.5,
+            "methods": ["huntington_3point", "schultz"],
+            "points": [
+                {
+                    "inlet_pressure": 4.0,
+                    "inlet_temperature": 300.0,
+                    "mass_rate": 8.0,
+                    "outlet_pressure": 8.6,
+                    "outlet_temperature": 372.0,
+                    "shaft_power": 1180000.0
+                },
+                {
+                    "inlet_pressure": 4.0,
+                    "inlet_temperature": 300.0,
+                    "mass_rate": 10.0,
+                    "outlet_pressure": 8.0,
+                    "outlet_temperature": 364.0,
+                    "shaft_power": 1340000.0
+                },
+                {
+                    "inlet_pressure": 4.0,
+                    "inlet_temperature": 300.0,
+                    "mass_rate": 12.0,
+                    "outlet_pressure": 7.2,
+                    "outlet_temperature": 358.0,
+                    "shaft_power": 1450000.0
+                }
+            ]
+        }))
+        .await?;
+    println!("{:?}", response.result);
+    ```
+
+## `calculate_compression_train`
+
+Compression train on a composition: per stage a turbo machine, an intercooler on the EOS enthalpy and a scrubber that removes the condensed liquid; stage and train power, duty, liquid and compositions.
+
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_compression_train) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_compression_train) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_compression_train)
+
+### Parameters
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `composition` | object | yes | The suction gas: components, mole fractions, cubic equation of state and `mass_rate` (kg/s, required). |
+| `inlet_pressure` | number | yes | Train suction pressure in MPa |
+| `inlet_temperature` | number | yes | Train suction temperature in Kelvin |
+| `stages` | array of object | yes | The stages in flow order. |
+
+### Example: three stages on a gas condensate, intercooled to 320 K and scrubbed
+
+=== "Python"
+
+    ```python
+    from graphsolve import GraphSolve
+
+    gs = GraphSolve()
+    response = gs.calculate_compression_train(
+        composition={
+            "component_names": ["methane", "ethane", "propane", "n-butane", "n-hexane", "n-decane"],
+            "mass_rate": 5.0,
+            "mole_fractions": [0.8, 0.08, 0.05, 0.03, 0.025, 0.015]
+        },
+        inlet_pressure=2.0,
+        inlet_temperature=360.0,
+        stages=[
+            {
+                "cooler": {
+                    "pressure_drop_mpa": 0.03,
+                    "target_temperature_k": 320.0
+                },
+                "turbo_machine": {
+                    "compressor_pressure_ratio": 2.2,
+                    "kind": "centrifugal_simple",
+                    "polytropic_efficiency": 0.78
+                }
+            },
+            {
+                "cooler": {
+                    "pressure_drop_mpa": 0.03,
+                    "target_temperature_k": 320.0
+                },
+                "turbo_machine": {
+                    "compressor_pressure_ratio": 2.2,
+                    "kind": "centrifugal_simple",
+                    "method": "schultz",
+                    "polytropic_efficiency": 0.78
+                }
+            },
+            {
+                "cooler": {
+                    "pressure_drop_mpa": 0.05,
+                    "target_temperature_k": 320.0
+                },
+                "knockout": False,
+                "turbo_machine": {
+                    "compressor_pressure_ratio": 2.0,
+                    "kind": "centrifugal_simple",
+                    "polytropic_efficiency": 0.76
+                }
+            }
+        ],
+    )
+    print(response["result"])
+    ```
+
+=== "TypeScript"
+
+    ```ts
+    import { GraphSolve } from "@graphsolve/sdk";
+
+    const gs = new GraphSolve();
+    const response = await gs.calculate_compression_train({
+        "composition": {
+            "component_names": ["methane", "ethane", "propane", "n-butane", "n-hexane", "n-decane"],
+            "mass_rate": 5.0,
+            "mole_fractions": [0.8, 0.08, 0.05, 0.03, 0.025, 0.015]
+        },
+        "inlet_pressure": 2.0,
+        "inlet_temperature": 360.0,
+        "stages": [
+            {
+                "cooler": {
+                    "pressure_drop_mpa": 0.03,
+                    "target_temperature_k": 320.0
+                },
+                "turbo_machine": {
+                    "compressor_pressure_ratio": 2.2,
+                    "kind": "centrifugal_simple",
+                    "polytropic_efficiency": 0.78
+                }
+            },
+            {
+                "cooler": {
+                    "pressure_drop_mpa": 0.03,
+                    "target_temperature_k": 320.0
+                },
+                "turbo_machine": {
+                    "compressor_pressure_ratio": 2.2,
+                    "kind": "centrifugal_simple",
+                    "method": "schultz",
+                    "polytropic_efficiency": 0.78
+                }
+            },
+            {
+                "cooler": {
+                    "pressure_drop_mpa": 0.05,
+                    "target_temperature_k": 320.0
+                },
+                "knockout": false,
+                "turbo_machine": {
+                    "compressor_pressure_ratio": 2.0,
+                    "kind": "centrifugal_simple",
+                    "polytropic_efficiency": 0.76
+                }
+            }
+        ]
+    });
+    console.log(response.result);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use graphsolve::GraphSolve;
+    use serde_json::json;
+
+    let gs = GraphSolve::new()?;
+    let response = gs
+        .call("calculate_compression_train", &json!({
+            "composition": {
+                "component_names": ["methane", "ethane", "propane", "n-butane", "n-hexane", "n-decane"],
+                "mass_rate": 5.0,
+                "mole_fractions": [0.8, 0.08, 0.05, 0.03, 0.025, 0.015]
+            },
+            "inlet_pressure": 2.0,
+            "inlet_temperature": 360.0,
+            "stages": [
+                {
+                    "cooler": {
+                        "pressure_drop_mpa": 0.03,
+                        "target_temperature_k": 320.0
+                    },
+                    "turbo_machine": {
+                        "compressor_pressure_ratio": 2.2,
+                        "kind": "centrifugal_simple",
+                        "polytropic_efficiency": 0.78
+                    }
+                },
+                {
+                    "cooler": {
+                        "pressure_drop_mpa": 0.03,
+                        "target_temperature_k": 320.0
+                    },
+                    "turbo_machine": {
+                        "compressor_pressure_ratio": 2.2,
+                        "kind": "centrifugal_simple",
+                        "method": "schultz",
+                        "polytropic_efficiency": 0.78
+                    }
+                },
+                {
+                    "cooler": {
+                        "pressure_drop_mpa": 0.05,
+                        "target_temperature_k": 320.0
+                    },
+                    "knockout": false,
+                    "turbo_machine": {
+                        "compressor_pressure_ratio": 2.0,
+                        "kind": "centrifugal_simple",
+                        "polytropic_efficiency": 0.76
+                    }
+                }
+            ]
+        }))
+        .await?;
+    println!("{:?}", response.result);
+    ```
+
 ## `calculate_compressor`
 
 Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressure ratio, and polytropic efficiency.
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_compressor) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_compressor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_compressor)
 
@@ -14,14 +344,17 @@ Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressu
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `fluid` | object | yes | Fluid configuration. `gas_rate` sets the mass flow; only `gas_mw` describes the gas. |
+| `composition` | object | no | Compositional stream in place of `fluid`: components, mole fractions, cubic equation of state and `mass_rate` (kg/s), which sets the flow. |
+| `fluid` | object | no | Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw` the dry GERG-2008 gas. Give this or `composition`. |
 | `inlet_pressure` | number | yes | Inlet pressure in MPa |
 | `inlet_temperature` | number | yes | Inlet temperature in Kelvin |
+| `isentropic_efficiency` | number | no | Isentropic efficiency (0–1), in place of `polytropic_efficiency`. |
 | `mechanical_efficiency` | number | no | Mechanical efficiency (0–1, default: 0.95) |
+| `method` | string | no | Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only), sandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point, reference_2017, reference_1985, hundseid_small_stage, improved_hundseid, sandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann. |
 | `polytropic_efficiency` | number | no | Polytropic efficiency (0–1, default: 0.75). This is the native parameter of the turbo centrifugal model. The result reports both the polytropic and the back-computed isentropic efficiency. |
 | `pressure_ratio` | number | yes | Pressure ratio (outlet/inlet, must be > 1.0) |
 
-### Example: two-to-one boost
+### Example: Schultz on a natural-gas composition
 
 === "Python"
 
@@ -30,12 +363,15 @@ Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressu
 
     gs = GraphSolve()
     response = gs.calculate_compressor(
-        fluid={
-            "gas_mw": 18.5,
-            "gas_rate": 500000
+        composition={
+            "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+            "mass_rate": 8.0,
+            "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
         },
         inlet_pressure=5.0,
-        inlet_temperature=350.0,
+        inlet_temperature=310.0,
+        isentropic_efficiency=0.75,
+        method="schultz",
         pressure_ratio=2.0,
     )
     print(response["result"])
@@ -48,12 +384,15 @@ Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressu
 
     const gs = new GraphSolve();
     const response = await gs.calculate_compressor({
-        "fluid": {
-            "gas_mw": 18.5,
-            "gas_rate": 500000
+        "composition": {
+            "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+            "mass_rate": 8.0,
+            "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
         },
         "inlet_pressure": 5.0,
-        "inlet_temperature": 350.0,
+        "inlet_temperature": 310.0,
+        "isentropic_efficiency": 0.75,
+        "method": "schultz",
         "pressure_ratio": 2.0
     });
     console.log(response.result);
@@ -68,12 +407,15 @@ Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressu
     let gs = GraphSolve::new()?;
     let response = gs
         .call("calculate_compressor", &json!({
-            "fluid": {
-                "gas_mw": 18.5,
-                "gas_rate": 500000
+            "composition": {
+                "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+                "mass_rate": 8.0,
+                "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
             },
             "inlet_pressure": 5.0,
-            "inlet_temperature": 350.0,
+            "inlet_temperature": 310.0,
+            "isentropic_efficiency": 0.75,
+            "method": "schultz",
             "pressure_ratio": 2.0
         }))
         .await?;
@@ -84,7 +426,7 @@ Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressu
 
 Multi-stage centrifugal train with optional inter-stage cooling; per-stage pressure ratios and overall discharge P/T, cooler duty and shaft power.
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_multistage_compressor) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_multistage_compressor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_multistage_compressor)
 
@@ -92,15 +434,17 @@ Multi-stage centrifugal train with optional inter-stage cooling; per-stage press
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `fluid` | object | yes | Fluid rates and PVT configuration (gas rate drives the mass flow). |
+| `composition` | object | no | Compositional stream in place of `fluid`: components, mole fractions, cubic equation of state and `mass_rate` (kg/s), which sets the flow. |
+| `fluid` | object | no | Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw` the dry GERG-2008 gas. Give this or `composition`. |
 | `inlet_pressure` | number | yes | Inlet pressure in MPa. |
 | `inlet_temperature` | number | yes | Inlet temperature in Kelvin. |
 | `intercool_pressure_drop` | number | no | Inter-stage cooler pressure drop in MPa (default: 0). |
 | `intercool_temperature` | number | no | Inter-stage cooler target temperature in Kelvin (applied between stages when set; omit for an uncooled train). |
 | `mechanical_efficiency` | number | no | Mechanical efficiency (0-1, default: 0.95). |
+| `method` | string | no | Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only), sandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point, reference_2017, reference_1985, hundseid_small_stage, improved_hundseid, sandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann. |
 | `stages` | array of object | yes | Compression stages, in order. |
 
-### Example: two intercooled stages
+### Example: three stages on a composition
 
 === "Python"
 
@@ -109,19 +453,25 @@ Multi-stage centrifugal train with optional inter-stage cooling; per-stage press
 
     gs = GraphSolve()
     response = gs.calculate_multistage_compressor(
-        fluid={
-            "gas_mw": 18.5,
-            "gas_rate": 500000
+        composition={
+            "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+            "mass_rate": 6.0,
+            "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
         },
         inlet_pressure=2.0,
         inlet_temperature=310.0,
+        intercool_pressure_drop=0.05,
         intercool_temperature=313.0,
         stages=[
             {
-                "pressure_ratio": 2.0
+                "pressure_ratio": 1.8
             },
             {
-                "pressure_ratio": 2.0
+                "pressure_ratio": 1.8
+            },
+            {
+                "method": "schultz",
+                "pressure_ratio": 1.8
             }
         ],
     )
@@ -135,19 +485,25 @@ Multi-stage centrifugal train with optional inter-stage cooling; per-stage press
 
     const gs = new GraphSolve();
     const response = await gs.calculate_multistage_compressor({
-        "fluid": {
-            "gas_mw": 18.5,
-            "gas_rate": 500000
+        "composition": {
+            "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+            "mass_rate": 6.0,
+            "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
         },
         "inlet_pressure": 2.0,
         "inlet_temperature": 310.0,
+        "intercool_pressure_drop": 0.05,
         "intercool_temperature": 313.0,
         "stages": [
             {
-                "pressure_ratio": 2.0
+                "pressure_ratio": 1.8
             },
             {
-                "pressure_ratio": 2.0
+                "pressure_ratio": 1.8
+            },
+            {
+                "method": "schultz",
+                "pressure_ratio": 1.8
             }
         ]
     });
@@ -163,19 +519,25 @@ Multi-stage centrifugal train with optional inter-stage cooling; per-stage press
     let gs = GraphSolve::new()?;
     let response = gs
         .call("calculate_multistage_compressor", &json!({
-            "fluid": {
-                "gas_mw": 18.5,
-                "gas_rate": 500000
+            "composition": {
+                "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+                "mass_rate": 6.0,
+                "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
             },
             "inlet_pressure": 2.0,
             "inlet_temperature": 310.0,
+            "intercool_pressure_drop": 0.05,
             "intercool_temperature": 313.0,
             "stages": [
                 {
-                    "pressure_ratio": 2.0
+                    "pressure_ratio": 1.8
                 },
                 {
-                    "pressure_ratio": 2.0
+                    "pressure_ratio": 1.8
+                },
+                {
+                    "method": "schultz",
+                    "pressure_ratio": 1.8
                 }
             ]
         }))
@@ -187,7 +549,7 @@ Multi-stage centrifugal train with optional inter-stage cooling; per-stage press
 
 Centrifugal pump or ESP at one suction state on the network pump model: discharge P/T, head, power, NPSH, per-section operating range and the ESP drive train.
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_pump) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_pump) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_pump)
 
@@ -196,8 +558,9 @@ Centrifugal pump or ESP at one suction state on the network pump model: discharg
 | Name | Type | Required | Description |
 |---|---|---|---|
 | `centrifugal` | object | no | Multistage centrifugal pump on stage curves, with an optional ESP drive train. Replaces `head_curve`. |
+| `composition` | object | no | Compositional stream in place of `fluid`: components, mole fractions and a cubic equation of state, with `mass_rate` (kg/s). Each march step flashes the stream at its own pressure and temperature. |
 | `efficiency` | number | no | Hydraulic efficiency (0-1) of a head-curve pump, and of any section without a stage-curve efficiency. Needed only then. |
-| `fluid` | object | yes | The pumped stream: standard-condition rates and black-oil PVT. It is evaluated at the inlet of every march step, so free gas compresses and redissolves along the pump. |
+| `fluid` | object | no | The pumped stream: standard-condition rates and black-oil PVT. It is evaluated at the inlet of every march step, so free gas compresses and redissolves along the pump. Give this or `composition`. |
 | `head_curve` | array of array of number | no | Single head curve as [flow m3/s in situ, head m] pairs, flow strictly increasing. Needed unless `centrifugal` is given, which replaces it. |
 | `inlet_pressure` | number | yes | Suction pressure in MPa. |
 | `inlet_temperature` | number | yes | Suction temperature in Kelvin. |
@@ -454,7 +817,7 @@ Single head-curve lookup: discharge pressure from one head-vs-rate curve read at
 
 Reciprocating (positive-displacement) compressor. Mass flow is set by displacement x speed x volumetric efficiency, not supplied.
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_reciprocating_compressor) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_reciprocating_compressor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_reciprocating_compressor)
 
@@ -464,6 +827,7 @@ Reciprocating (positive-displacement) compressor. Mass flow is set by displaceme
 |---|---|---|---|
 | `clearance_fraction` | number | no | Clearance volume as a fraction of swept volume (default: 0.12). |
 | `co2_fraction` | number | no | CO2 mole fraction in the gas (default: 0). |
+| `composition` | object | no | Compositional gas in place of the GERG gas (`gas_molecular_weight` and impurity fractions): components, mole fractions and cubic equation of state. `mass_rate` is not used; the machine sets the flow. |
 | `discharge_pressure` | number | yes | Discharge (flange) pressure in MPa. Must be greater than inlet_pressure. |
 | `gas_molecular_weight` | number | no | Gas molecular weight in g/mol (default: 20.279). |
 | `h2s_fraction` | number | no | H2S mole fraction in the gas (default: 0). |
@@ -471,6 +835,7 @@ Reciprocating (positive-displacement) compressor. Mass flow is set by displaceme
 | `inlet_temperature` | number | yes | Suction (inlet) temperature in Kelvin. |
 | `max_pressure_ratio` | number | no | Upper guard on the per-stage pressure ratio the solver may explore (default: 6.0). |
 | `mechanical_efficiency` | number | no | Mechanical efficiency (0-1, default: 0.95); converts fluid power to shaft power. |
+| `method` | string | no | Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only), sandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point, reference_2017, reference_1985, hundseid_small_stage, improved_hundseid, sandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann. |
 | `min_pressure_ratio` | number | no | Lower guard on the per-stage pressure ratio (default: 1.0). |
 | `n2_fraction` | number | no | N2 mole fraction in the gas (default: 0). |
 | `polytropic_efficiency` | number | no | Polytropic efficiency (0-1, default: 0.80). Native turbo parameter; the result also reports the back-computed isentropic efficiency. |
@@ -537,7 +902,7 @@ Reciprocating (positive-displacement) compressor. Mass flow is set by displaceme
 
 Screw (positive-displacement) compressor closed by black-box efficiencies; mass flow = volumetric efficiency x suction density x displacement per revolution x shaft speed in rev/s.
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_screw_compressor) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_screw_compressor) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_screw_compressor)
 
@@ -546,6 +911,7 @@ Screw (positive-displacement) compressor closed by black-box efficiencies; mass 
 | Name | Type | Required | Description |
 |---|---|---|---|
 | `co2_fraction` | number | no | CO2 mole fraction (default: 0). |
+| `composition` | object | no | Compositional gas in place of the GERG gas (`gas_molecular_weight` and impurity fractions): components, mole fractions and cubic equation of state. `mass_rate` is not used; the machine sets the flow. |
 | `discharge_pressure` | number | yes | Discharge pressure in MPa (must exceed inlet_pressure). |
 | `displacement_per_rev_m3` | number | yes | Displacement (swept volume) per revolution in m^3, > 0. |
 | `gas_molecular_weight` | number | no | Gas molecular weight in g/mol (default: 20.279). |
@@ -553,13 +919,14 @@ Screw (positive-displacement) compressor closed by black-box efficiencies; mass 
 | `inlet_pressure` | number | yes | Suction pressure in MPa. |
 | `inlet_temperature` | number | yes | Suction temperature in Kelvin. |
 | `mechanical_efficiency` | number | no | Mechanical efficiency (0-1, default: 0.95). |
+| `method` | string | no | Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only), sandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point, reference_2017, reference_1985, hundseid_small_stage, improved_hundseid, sandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann. |
 | `n2_fraction` | number | no | N2 mole fraction (default: 0). |
 | `polytropic_efficiency` | number | no | Internal polytropic efficiency (0-1, default: 0.70). |
 | `shaft_speed_rev_s` | number | yes | Shaft speed in revolutions per second (50 rev/s = 3000 rpm), > 0. A network `screw_simple_pd` machine takes its `shaft_speed` in rad/s instead (2π × rev/s). |
 | `subtype` | string | no | Screw subtype: "dry" (default), "oil_flooded", or "water_injected". |
 | `volumetric_efficiency` | number | no | Volumetric efficiency (0-1, default: 0.85). |
 
-### Example: three-to-one boost
+### Example: oil-flooded screw on a composition
 
 === "Python"
 
@@ -568,12 +935,16 @@ Screw (positive-displacement) compressor closed by black-box efficiencies; mass 
 
     gs = GraphSolve()
     response = gs.calculate_screw_compressor(
+        composition={
+            "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+            "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
+        },
         discharge_pressure=3.0,
         displacement_per_rev_m3=0.01,
-        gas_molecular_weight=18.5,
         inlet_pressure=1.0,
         inlet_temperature=305.0,
         shaft_speed_rev_s=50.0,
+        subtype="oil_flooded",
     )
     print(response["result"])
     ```
@@ -585,12 +956,16 @@ Screw (positive-displacement) compressor closed by black-box efficiencies; mass 
 
     const gs = new GraphSolve();
     const response = await gs.calculate_screw_compressor({
+        "composition": {
+            "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+            "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
+        },
         "discharge_pressure": 3.0,
         "displacement_per_rev_m3": 0.01,
-        "gas_molecular_weight": 18.5,
         "inlet_pressure": 1.0,
         "inlet_temperature": 305.0,
-        "shaft_speed_rev_s": 50.0
+        "shaft_speed_rev_s": 50.0,
+        "subtype": "oil_flooded"
     });
     console.log(response.result);
     ```
@@ -604,12 +979,16 @@ Screw (positive-displacement) compressor closed by black-box efficiencies; mass 
     let gs = GraphSolve::new()?;
     let response = gs
         .call("calculate_screw_compressor", &json!({
+            "composition": {
+                "component_names": ["methane", "ethane", "propane", "n-butane", "carbon dioxide"],
+                "mole_fractions": [0.85, 0.08, 0.04, 0.02, 0.01]
+            },
             "discharge_pressure": 3.0,
             "displacement_per_rev_m3": 0.01,
-            "gas_molecular_weight": 18.5,
             "inlet_pressure": 1.0,
             "inlet_temperature": 305.0,
-            "shaft_speed_rev_s": 50.0
+            "shaft_speed_rev_s": 50.0,
+            "subtype": "oil_flooded"
         }))
         .await?;
     println!("{:?}", response.result);
@@ -619,7 +998,7 @@ Screw (positive-displacement) compressor closed by black-box efficiencies; mass 
 
 Single-stage centrifugal turbine/expander: outlet P/T and power generated from inlet P/T and an expansion pressure ratio (0 < PR < 1).
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_turbine) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_turbine) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_turbine)
 
@@ -627,10 +1006,13 @@ Single-stage centrifugal turbine/expander: outlet P/T and power generated from i
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `fluid` | object | yes | Fluid configuration. `gas_rate` sets the mass flow; only `gas_mw` describes the gas. |
+| `composition` | object | no | Compositional stream in place of `fluid`: components, mole fractions, cubic equation of state and `mass_rate` (kg/s), which sets the flow. |
+| `fluid` | object | no | Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw` the dry GERG-2008 gas. Give this or `composition`. |
 | `inlet_pressure` | number | yes | Inlet pressure in MPa |
 | `inlet_temperature` | number | yes | Inlet temperature in Kelvin |
+| `isentropic_efficiency` | number | no | Isentropic efficiency (0–1), in place of `polytropic_efficiency`. |
 | `mechanical_efficiency` | number | no | Mechanical efficiency (0–1, default: 0.95) |
+| `method` | string | no | Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only), sandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point, reference_2017, reference_1985, hundseid_small_stage, improved_hundseid, sandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann. |
 | `polytropic_efficiency` | number | no | Polytropic efficiency (0–1, default: 0.80). Native parameter of the turbo centrifugal expander model. The result reports both the polytropic and the back-computed isentropic efficiency. |
 | `pressure_ratio` | number | yes | Pressure ratio (outlet/inlet, must be 0 < PR < 1.0) |
 
@@ -688,6 +1070,116 @@ Single-stage centrifugal turbine/expander: outlet P/T and power generated from i
             "inlet_pressure": 10.0,
             "inlet_temperature": 400.0,
             "pressure_ratio": 0.5
+        }))
+        .await?;
+    println!("{:?}", response.result);
+    ```
+
+## `calculate_turbo_machine`
+
+Any network turbo machine (centrifugal simple/mapped/map/multistage, axial, screw, reciprocating) at one operating point, on a GERG gas or an EOS composition, with a chosen path method.
+
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_turbo_machine) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_turbo_machine) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_turbo_machine)
+
+### Parameters
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `composition` | object | no | Compositional stream: components, mole fractions, equation of state and `mass_rate` (kg/s). Give this or `fluid`. |
+| `discharge_pressure` | number | no | Discharge pressure in MPa, for a positive-displacement machine solved for its capacity. Give this or a flow, not both. |
+| `fluid` | object | no | Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw` the GERG-2008 gas. Give this or `composition`. |
+| `inlet_pressure` | number | yes | Inlet (suction) pressure in MPa |
+| `inlet_temperature` | number | yes | Inlet (suction) temperature in Kelvin |
+| `mechanical_efficiency` | number | no | Mechanical efficiency (0–1, default 0.95), for machines whose result carries no shaft power of its own. |
+| `mode` | string | no | Compressor (default) or expander. |
+| `turbo_machine` | object | yes | The machine, tagged by `kind`, exactly as on a network compressor or turbine edge. Every kind takes an optional path `method` (default huntington_3point). |
+
+### Example: single-speed mapped compressor on a GERG gas
+
+=== "Python"
+
+    ```python
+    from graphsolve import GraphSolve
+
+    gs = GraphSolve()
+    response = gs.calculate_turbo_machine(
+        fluid={
+            "gas_mw": 18.5,
+            "gas_rate": 1000000
+        },
+        inlet_pressure=5.0,
+        inlet_temperature=300.0,
+        turbo_machine={
+            "efficiency_curve": {
+                "x": [0.1, 0.2, 0.3],
+                "y": [0.72, 0.79, 0.75]
+            },
+            "head_curve": {
+                "x": [0.1, 0.2, 0.3],
+                "y": [90000.0, 80000.0, 62000.0]
+            },
+            "kind": "centrifugal_mapped"
+        },
+    )
+    print(response["result"])
+    ```
+
+=== "TypeScript"
+
+    ```ts
+    import { GraphSolve } from "@graphsolve/sdk";
+
+    const gs = new GraphSolve();
+    const response = await gs.calculate_turbo_machine({
+        "fluid": {
+            "gas_mw": 18.5,
+            "gas_rate": 1000000
+        },
+        "inlet_pressure": 5.0,
+        "inlet_temperature": 300.0,
+        "turbo_machine": {
+            "efficiency_curve": {
+                "x": [0.1, 0.2, 0.3],
+                "y": [0.72, 0.79, 0.75]
+            },
+            "head_curve": {
+                "x": [0.1, 0.2, 0.3],
+                "y": [90000.0, 80000.0, 62000.0]
+            },
+            "kind": "centrifugal_mapped"
+        }
+    });
+    console.log(response.result);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use graphsolve::GraphSolve;
+    use serde_json::json;
+
+    let gs = GraphSolve::new()?;
+    let response = gs
+        .call("calculate_turbo_machine", &json!({
+            "fluid": {
+                "gas_mw": 18.5,
+                "gas_rate": 1000000
+            },
+            "inlet_pressure": 5.0,
+            "inlet_temperature": 300.0,
+            "turbo_machine": {
+                "efficiency_curve": {
+                    "x": [0.1, 0.2, 0.3],
+                    "y": [0.72, 0.79, 0.75]
+                },
+                "head_curve": {
+                    "x": [0.1, 0.2, 0.3],
+                    "y": [90000.0, 80000.0, 62000.0]
+                },
+                "kind": "centrifugal_mapped"
+            }
         }))
         .await?;
     println!("{:?}", response.result);

@@ -1,6 +1,6 @@
 [package]
 name = "graphsolve"
-version = "1.0.40"
+version = "1.0.42"
 edition = "2021"
 # Set by the locked dependency tree rather than by this crate's own syntax: the
 # icu_* crates reached through reqwest's idna require 1.88. CI pins a toolchain

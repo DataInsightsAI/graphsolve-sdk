@@ -6,7 +6,7 @@
 
 Heater/cooler on the network edge's energy balance, in fixed_duty, fixed_outlet_temperature, approach_temperature or ua mode; returns outlet P/T and duty.
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_heater_cooler) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_heater_cooler) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_heater_cooler)
 
@@ -15,7 +15,8 @@ Heater/cooler on the network edge's energy balance, in fixed_duty, fixed_outlet_
 | Name | Type | Required | Description |
 |---|---|---|---|
 | `approach_temperature` | number | no | Approach to the utility temperature in Kelvin for approach_temperature |
-| `fluid` | object | yes | Fluid configuration |
+| `composition` | object | no | Compositional stream in place of `fluid`: components, mole fractions and a cubic equation of state, with `mass_rate` (kg/s). The energy balance is on the EOS enthalpy, so condensation and boiling count. |
+| `fluid` | object | no | Fluid configuration Give this or `composition`. |
 | `heat_duty` | number | no | Heat duty in W for fixed_duty (positive heats, negative cools) |
 | `inlet_pressure` | number | yes | Inlet pressure in MPa |
 | `inlet_temperature` | number | yes | Inlet temperature in Kelvin |
@@ -26,7 +27,7 @@ Heater/cooler on the network edge's energy balance, in fixed_duty, fixed_outlet_
 | `ua` | number | no | Overall conductance UA in W/K for ua (> 0) |
 | `utility_temperature` | number | no | Utility (cooling water, steam, refrigerant) temperature in Kelvin for approach_temperature and ua |
 
-### Example: cooler to a 5 K approach
+### Example: condensing cooler on a gas condensate
 
 === "Python"
 
@@ -35,19 +36,16 @@ Heater/cooler on the network edge's energy balance, in fixed_duty, fixed_outlet_
 
     gs = GraphSolve()
     response = gs.calculate_heater_cooler(
-        approach_temperature=5.0,
-        fluid={
-            "gas_mw": 18.5,
-            "gas_rate": 100000,
-            "oil_rate": 200,
-            "water_rate": 100
+        composition={
+            "component_names": ["methane", "ethane", "n-decane"],
+            "mass_rate": 5.0,
+            "mole_fractions": [0.85, 0.1, 0.05]
         },
-        inlet_pressure=10.0,
-        inlet_temperature=350.0,
-        max_duty=2000000.0,
-        mode="approach_temperature",
+        inlet_pressure=5.0,
+        inlet_temperature=500.0,
+        mode="fixed_outlet_temperature",
+        outlet_temperature=330.0,
         pressure_drop=0.05,
-        utility_temperature=290.0,
     )
     print(response["result"])
     ```
@@ -59,19 +57,16 @@ Heater/cooler on the network edge's energy balance, in fixed_duty, fixed_outlet_
 
     const gs = new GraphSolve();
     const response = await gs.calculate_heater_cooler({
-        "approach_temperature": 5.0,
-        "fluid": {
-            "gas_mw": 18.5,
-            "gas_rate": 100000,
-            "oil_rate": 200,
-            "water_rate": 100
+        "composition": {
+            "component_names": ["methane", "ethane", "n-decane"],
+            "mass_rate": 5.0,
+            "mole_fractions": [0.85, 0.1, 0.05]
         },
-        "inlet_pressure": 10.0,
-        "inlet_temperature": 350.0,
-        "max_duty": 2000000.0,
-        "mode": "approach_temperature",
-        "pressure_drop": 0.05,
-        "utility_temperature": 290.0
+        "inlet_pressure": 5.0,
+        "inlet_temperature": 500.0,
+        "mode": "fixed_outlet_temperature",
+        "outlet_temperature": 330.0,
+        "pressure_drop": 0.05
     });
     console.log(response.result);
     ```
@@ -85,19 +80,16 @@ Heater/cooler on the network edge's energy balance, in fixed_duty, fixed_outlet_
     let gs = GraphSolve::new()?;
     let response = gs
         .call("calculate_heater_cooler", &json!({
-            "approach_temperature": 5.0,
-            "fluid": {
-                "gas_mw": 18.5,
-                "gas_rate": 100000,
-                "oil_rate": 200,
-                "water_rate": 100
+            "composition": {
+                "component_names": ["methane", "ethane", "n-decane"],
+                "mass_rate": 5.0,
+                "mole_fractions": [0.85, 0.1, 0.05]
             },
-            "inlet_pressure": 10.0,
-            "inlet_temperature": 350.0,
-            "max_duty": 2000000.0,
-            "mode": "approach_temperature",
-            "pressure_drop": 0.05,
-            "utility_temperature": 290.0
+            "inlet_pressure": 5.0,
+            "inlet_temperature": 500.0,
+            "mode": "fixed_outlet_temperature",
+            "outlet_temperature": 330.0,
+            "pressure_drop": 0.05
         }))
         .await?;
     println!("{:?}", response.result);
@@ -107,7 +99,7 @@ Heater/cooler on the network edge's energy balance, in fixed_duty, fixed_outlet_
 
 Outlet temperature after a constant-enthalpy (Joule-Thomson) expansion to a lower pressure.
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_isenthalpic_temperature) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_isenthalpic_temperature) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_isenthalpic_temperature)
 
@@ -115,7 +107,8 @@ Outlet temperature after a constant-enthalpy (Joule-Thomson) expansion to a lowe
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `fluid` | object | yes | Fluid configuration |
+| `composition` | object | no | Compositional stream in place of `fluid`: components, mole fractions and a cubic equation of state. The outlet temperature comes from an EOS PH flash; `mass_rate` is not used. |
+| `fluid` | object | no | Fluid configuration Give this or `composition`. |
 | `inlet_pressure` | number | yes | Inlet pressure in MPa |
 | `inlet_temperature` | number | yes | Inlet temperature in Kelvin |
 | `outlet_pressure` | number | yes | Outlet pressure in MPa (must be < inlet_pressure) |
@@ -183,7 +176,7 @@ Outlet temperature after a constant-enthalpy (Joule-Thomson) expansion to a lowe
 
 Joule-Thomson throttle valve: outlet T after an isenthalpic pressure drop.
 
-**Price:** Costs 1 credit.
+**Price:** Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
 
 **In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_jt_valve) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_jt_valve) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_jt_valve)
 
@@ -191,7 +184,8 @@ Joule-Thomson throttle valve: outlet T after an isenthalpic pressure drop.
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `fluid` | object | yes | Fluid configuration |
+| `composition` | object | no | Compositional stream in place of `fluid`: components, mole fractions and a cubic equation of state. The outlet temperature comes from an EOS PH flash; `mass_rate` is not used. |
+| `fluid` | object | no | Fluid configuration Give this or `composition`. |
 | `inlet_pressure` | number | yes | Inlet pressure in MPa |
 | `inlet_temperature` | number | yes | Inlet temperature in Kelvin |
 | `pressure_drop` | number | yes | Pressure drop across the valve in MPa (positive value), the same unit as a network jt_valve edge's `jt_valve_data.pressure_drop` |
