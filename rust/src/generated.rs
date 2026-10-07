@@ -4,23 +4,25 @@
 //! Run `python emit/emit_rust.py` after a spec change; CI fails if this
 //! file and the spec disagree.
 //!
-//! Engine API version: 1.0.40
-//! Tools: 98
+//! Engine API version: 1.0.42
+//! Tools: 101
 
 use serde::{Deserialize, Serialize};
 
 use crate::{GraphSolve, Result, ToolResponse};
 
 /// Every tool this client knows about, in the order the API lists them.
-pub const TOOL_NAMES: [&str; 98] = [
+pub const TOOL_NAMES: [&str; 101] = [
     "adjust_composition_to_gor",
     "adjust_composition_to_phase_ratio",
     "aggregate_type_well",
     "allocate_production",
+    "analyse_turbo_performance",
     "analyze_material_balance",
     "calculate_aquifer_influx",
     "calculate_choke_pressure_drop",
     "calculate_choke_size",
+    "calculate_compression_train",
     "calculate_compressor",
     "calculate_corrosion_rate",
     "calculate_critical_point",
@@ -46,6 +48,7 @@ pub const TOOL_NAMES: [&str; 98] = [
     "calculate_saturation_pressure",
     "calculate_screw_compressor",
     "calculate_turbine",
+    "calculate_turbo_machine",
     "calculate_volumetrics",
     "calculate_water_properties",
     "calculate_wax_deposition_rate",
@@ -451,6 +454,17 @@ pub enum SlipModelName {
     LockhartMartenelli,
 }
 
+/// Whether the machine compresses or expands the gas.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TurboModeName {
+    /// Compressor (default).
+    #[serde(rename = "compressor")]
+    Compressor,
+    /// Expander / turbine. Only centrifugal and axial machines expand.
+    #[serde(rename = "expander")]
+    Expander,
+}
+
 /// Activity model for the Tier-3 wax SLE flash.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum WaxActivityModelName {
@@ -558,6 +572,38 @@ pub struct AllocateProductionParams {
     pub network_json: serde_json::Value,
 }
 
+/// Arguments for [`GraphSolve::analyse_turbo_performance`](crate::GraphSolve::analyse_turbo_performance).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct AnalyseTurboPerformanceParams {
+    /// The measured points.
+    pub points: Vec<serde_json::Value>,
+    /// GERG gas CO2 mole fraction (default 0).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub co2_fraction: Option<f64>,
+    /// Compositional gas, in place of the GERG gas.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
+    /// GERG gas molecular weight in g/mol (default 20.279).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_molecular_weight: Option<f64>,
+    /// GERG gas H2S mole fraction (default 0).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub h2s_fraction: Option<f64>,
+    /// Path methods to compare (default \["huntington_3point"\]): ideal_gas_exact,
+    /// schultz, sandberg_colby_endpoint, huntington_2point, huntington_3point,
+    /// huntington_4point, reference_2017, reference_1985, hundseid_small_stage,
+    /// improved_hundseid, sandberg_colby_multistep, taher_evans_cubic,
+    /// sandberg_colby_huntington_weyermann. The first one fits the map.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub methods: Option<Vec<String>>,
+    /// Compressor (default) or expander.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<TurboModeName>,
+    /// GERG gas N2 mole fraction (default 0).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub n2_fraction: Option<f64>,
+}
+
 /// Arguments for [`GraphSolve::analyze_material_balance`](crate::GraphSolve::analyze_material_balance).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct AnalyzeMaterialBalanceParams {
@@ -581,18 +627,17 @@ pub struct CalculateAquiferInfluxParams {
 pub struct CalculateChokePressureDropParams {
     /// Choke diameter in meters
     pub choke_diameter: f64,
-    /// Free gas rate in Sm3/day at standard conditions. The oil carries oil_rate ×
-    /// dissolved_gas_ratio in solution on top of it, so subtract that from a total
-    /// produced gas rate.
-    pub gas_rate: f64,
     /// Inlet pressure in MPa
     pub inlet_pressure: f64,
     /// Inlet temperature in Kelvin
     pub inlet_temperature: f64,
-    /// Oil rate in Sm3/day
-    pub oil_rate: f64,
-    /// Water rate in Sm3/day
-    pub water_rate: f64,
+    /// Compositional stream in place of the black-oil rates and properties:
+    /// components, mole fractions, a cubic equation of state and `mass_rate`
+    /// (kg/s). The choke is then the compositional choke edge's: the homogeneous
+    /// orifice, or Sachdeva's model for a two-phase stream, with no pressure
+    /// recovery, so `pipe_diameter_ratio` and `perry_multiplier` do not apply.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
     /// Choke discharge coefficient Cd, in (0, 1\] (default: 0.68441971). The mass
     /// rate at a given pressure ratio is proportional to Cd.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -603,9 +648,17 @@ pub struct CalculateChokePressureDropParams {
     /// Gas molecular weight in g/mol (default: 19.83)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gas_mw: Option<f64>,
+    /// Free gas rate in Sm3/day at standard conditions. The oil carries oil_rate ×
+    /// dissolved_gas_ratio in solution on top of it, so subtract that from a total
+    /// produced gas rate.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_rate: Option<f64>,
     /// Oil density in kg/m3 (default: 850)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oil_density: Option<f64>,
+    /// Oil rate in Sm3/day
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oil_rate: Option<f64>,
     /// Exponent m of the pressure recovery downstream of the vena contracta, p_out
     /// = p_in - (p_in - p_vc)(1 - (d/D)^m) with p_vc the vena-contracta pressure;
     /// positive (default: 2.99996817)
@@ -619,6 +672,9 @@ pub struct CalculateChokePressureDropParams {
     /// Slip model (default: hydro)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub slip_model: Option<SlipModelName>,
+    /// Water rate in Sm3/day
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub water_rate: Option<f64>,
     /// Water salinity in ppm (default: 0)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub water_salinity: Option<f64>,
@@ -671,21 +727,50 @@ pub struct CalculateChokeSizeParams {
     pub water_salinity: Option<f64>,
 }
 
+/// Arguments for [`GraphSolve::calculate_compression_train`](crate::GraphSolve::calculate_compression_train).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CalculateCompressionTrainParams {
+    /// The suction gas: components, mole fractions, cubic equation of state and
+    /// `mass_rate` (kg/s, required).
+    pub composition: serde_json::Value,
+    /// Train suction pressure in MPa
+    pub inlet_pressure: f64,
+    /// Train suction temperature in Kelvin
+    pub inlet_temperature: f64,
+    /// The stages in flow order.
+    pub stages: Vec<serde_json::Value>,
+}
+
 /// Arguments for [`GraphSolve::calculate_compressor`](crate::GraphSolve::calculate_compressor).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculateCompressorParams {
-    /// Fluid configuration. `gas_rate` sets the mass flow; only `gas_mw` describes
-    /// the gas.
-    pub fluid: serde_json::Value,
     /// Inlet pressure in MPa
     pub inlet_pressure: f64,
     /// Inlet temperature in Kelvin
     pub inlet_temperature: f64,
     /// Pressure ratio (outlet/inlet, must be > 1.0)
     pub pressure_ratio: f64,
+    /// Compositional stream in place of `fluid`: components, mole fractions, cubic
+    /// equation of state and `mass_rate` (kg/s), which sets the flow.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
+    /// Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw` the
+    /// dry GERG-2008 gas. Give this or `composition`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fluid: Option<serde_json::Value>,
+    /// Isentropic efficiency (0–1), in place of `polytropic_efficiency`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub isentropic_efficiency: Option<f64>,
     /// Mechanical efficiency (0–1, default: 0.95)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mechanical_efficiency: Option<f64>,
+    /// Path method (default huntington_3point): ideal_gas_exact, schultz
+    /// (compressor only), sandberg_colby_endpoint, huntington_2point,
+    /// huntington_3point, huntington_4point, reference_2017, reference_1985,
+    /// hundseid_small_stage, improved_hundseid, sandberg_colby_multistep,
+    /// taher_evans_cubic, sandberg_colby_huntington_weyermann.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
     /// Polytropic efficiency (0–1, default: 0.75). This is the native parameter of
     /// the turbo centrifugal model. The result reports both the polytropic and the
     /// back-computed isentropic efficiency.
@@ -818,8 +903,6 @@ pub struct CalculateGasDewPointParams {
 /// Arguments for [`GraphSolve::calculate_heater_cooler`](crate::GraphSolve::calculate_heater_cooler).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CalculateHeaterCoolerParams {
-    /// Fluid configuration
-    pub fluid: serde_json::Value,
     /// Inlet pressure in MPa
     pub inlet_pressure: f64,
     /// Inlet temperature in Kelvin
@@ -829,6 +912,14 @@ pub struct CalculateHeaterCoolerParams {
     /// Approach to the utility temperature in Kelvin for approach_temperature
     #[serde(skip_serializing_if = "Option::is_none")]
     pub approach_temperature: Option<f64>,
+    /// Compositional stream in place of `fluid`: components, mole fractions and a
+    /// cubic equation of state, with `mass_rate` (kg/s). The energy balance is on
+    /// the EOS enthalpy, so condensation and boiling count.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
+    /// Fluid configuration Give this or `composition`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fluid: Option<serde_json::Value>,
     /// Heat duty in W for fixed_duty (positive heats, negative cools)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub heat_duty: Option<f64>,
@@ -873,21 +964,25 @@ pub struct CalculateHydrateTemperatureParams {
 /// Arguments for [`GraphSolve::calculate_isenthalpic_temperature`](crate::GraphSolve::calculate_isenthalpic_temperature).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculateIsenthalpicTemperatureParams {
-    /// Fluid configuration
-    pub fluid: serde_json::Value,
     /// Inlet pressure in MPa
     pub inlet_pressure: f64,
     /// Inlet temperature in Kelvin
     pub inlet_temperature: f64,
     /// Outlet pressure in MPa (must be < inlet_pressure)
     pub outlet_pressure: f64,
+    /// Compositional stream in place of `fluid`: components, mole fractions and a
+    /// cubic equation of state. The outlet temperature comes from an EOS PH flash;
+    /// `mass_rate` is not used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
+    /// Fluid configuration Give this or `composition`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fluid: Option<serde_json::Value>,
 }
 
 /// Arguments for [`GraphSolve::calculate_jt_valve`](crate::GraphSolve::calculate_jt_valve).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculateJtValveParams {
-    /// Fluid configuration
-    pub fluid: serde_json::Value,
     /// Inlet pressure in MPa
     pub inlet_pressure: f64,
     /// Inlet temperature in Kelvin
@@ -895,6 +990,14 @@ pub struct CalculateJtValveParams {
     /// Pressure drop across the valve in MPa (positive value), the same unit as a
     /// network jt_valve edge's `jt_valve_data.pressure_drop`
     pub pressure_drop: f64,
+    /// Compositional stream in place of `fluid`: components, mole fractions and a
+    /// cubic equation of state. The outlet temperature comes from an EOS PH flash;
+    /// `mass_rate` is not used.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
+    /// Fluid configuration Give this or `composition`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fluid: Option<serde_json::Value>,
 }
 
 /// Arguments for [`GraphSolve::calculate_mmp`](crate::GraphSolve::calculate_mmp).
@@ -928,14 +1031,20 @@ pub struct CalculateMpfmAllocationParams {
 /// Arguments for [`GraphSolve::calculate_multistage_compressor`](crate::GraphSolve::calculate_multistage_compressor).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculateMultistageCompressorParams {
-    /// Fluid rates and PVT configuration (gas rate drives the mass flow).
-    pub fluid: serde_json::Value,
     /// Inlet pressure in MPa.
     pub inlet_pressure: f64,
     /// Inlet temperature in Kelvin.
     pub inlet_temperature: f64,
     /// Compression stages, in order.
     pub stages: Vec<serde_json::Value>,
+    /// Compositional stream in place of `fluid`: components, mole fractions, cubic
+    /// equation of state and `mass_rate` (kg/s), which sets the flow.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
+    /// Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw` the
+    /// dry GERG-2008 gas. Give this or `composition`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fluid: Option<serde_json::Value>,
     /// Inter-stage cooler pressure drop in MPa (default: 0).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub intercool_pressure_drop: Option<f64>,
@@ -946,6 +1055,13 @@ pub struct CalculateMultistageCompressorParams {
     /// Mechanical efficiency (0-1, default: 0.95).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mechanical_efficiency: Option<f64>,
+    /// Path method (default huntington_3point): ideal_gas_exact, schultz
+    /// (compressor only), sandberg_colby_endpoint, huntington_2point,
+    /// huntington_3point, huntington_4point, reference_2017, reference_1985,
+    /// hundseid_small_stage, improved_hundseid, sandberg_colby_multistep,
+    /// taher_evans_cubic, sandberg_colby_huntington_weyermann.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
 }
 
 /// Arguments for [`GraphSolve::calculate_nodal_analysis`](crate::GraphSolve::calculate_nodal_analysis).
@@ -1105,10 +1221,6 @@ pub struct CalculatePressureDropParams {
 /// Arguments for [`GraphSolve::calculate_pump`](crate::GraphSolve::calculate_pump).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculatePumpParams {
-    /// The pumped stream: standard-condition rates and black-oil PVT. It is
-    /// evaluated at the inlet of every march step, so free gas compresses and
-    /// redissolves along the pump.
-    pub fluid: serde_json::Value,
     /// Suction pressure in MPa.
     pub inlet_pressure: f64,
     /// Suction temperature in Kelvin.
@@ -1117,10 +1229,20 @@ pub struct CalculatePumpParams {
     /// train. Replaces `head_curve`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub centrifugal: Option<serde_json::Value>,
+    /// Compositional stream in place of `fluid`: components, mole fractions and a
+    /// cubic equation of state, with `mass_rate` (kg/s). Each march step flashes
+    /// the stream at its own pressure and temperature.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
     /// Hydraulic efficiency (0-1) of a head-curve pump, and of any section without
     /// a stage-curve efficiency. Needed only then.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub efficiency: Option<f64>,
+    /// The pumped stream: standard-condition rates and black-oil PVT. It is
+    /// evaluated at the inlet of every march step, so free gas compresses and
+    /// redissolves along the pump. Give this or `composition`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fluid: Option<serde_json::Value>,
     /// Single head curve as \[flow m3/s in situ, head m\] pairs, flow strictly
     /// increasing. Needed unless `centrifugal` is given, which replaces it.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1248,6 +1370,11 @@ pub struct CalculateReciprocatingCompressorParams {
     /// CO2 mole fraction in the gas (default: 0).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub co2_fraction: Option<f64>,
+    /// Compositional gas in place of the GERG gas (`gas_molecular_weight` and
+    /// impurity fractions): components, mole fractions and cubic equation of state.
+    /// `mass_rate` is not used; the machine sets the flow.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
     /// Gas molecular weight in g/mol (default: 20.279).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gas_molecular_weight: Option<f64>,
@@ -1262,6 +1389,13 @@ pub struct CalculateReciprocatingCompressorParams {
     /// power.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mechanical_efficiency: Option<f64>,
+    /// Path method (default huntington_3point): ideal_gas_exact, schultz
+    /// (compressor only), sandberg_colby_endpoint, huntington_2point,
+    /// huntington_3point, huntington_4point, reference_2017, reference_1985,
+    /// hundseid_small_stage, improved_hundseid, sandberg_colby_multistep,
+    /// taher_evans_cubic, sandberg_colby_huntington_weyermann.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
     /// Lower guard on the per-stage pressure ratio (default: 1.0).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub min_pressure_ratio: Option<f64>,
@@ -1350,6 +1484,11 @@ pub struct CalculateScrewCompressorParams {
     /// CO2 mole fraction (default: 0).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub co2_fraction: Option<f64>,
+    /// Compositional gas in place of the GERG gas (`gas_molecular_weight` and
+    /// impurity fractions): components, mole fractions and cubic equation of state.
+    /// `mass_rate` is not used; the machine sets the flow.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
     /// Gas molecular weight in g/mol (default: 20.279).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gas_molecular_weight: Option<f64>,
@@ -1359,6 +1498,13 @@ pub struct CalculateScrewCompressorParams {
     /// Mechanical efficiency (0-1, default: 0.95).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mechanical_efficiency: Option<f64>,
+    /// Path method (default huntington_3point): ideal_gas_exact, schultz
+    /// (compressor only), sandberg_colby_endpoint, huntington_2point,
+    /// huntington_3point, huntington_4point, reference_2017, reference_1985,
+    /// hundseid_small_stage, improved_hundseid, sandberg_colby_multistep,
+    /// taher_evans_cubic, sandberg_colby_huntington_weyermann.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
     /// N2 mole fraction (default: 0).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub n2_fraction: Option<f64>,
@@ -1376,23 +1522,70 @@ pub struct CalculateScrewCompressorParams {
 /// Arguments for [`GraphSolve::calculate_turbine`](crate::GraphSolve::calculate_turbine).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculateTurbineParams {
-    /// Fluid configuration. `gas_rate` sets the mass flow; only `gas_mw` describes
-    /// the gas.
-    pub fluid: serde_json::Value,
     /// Inlet pressure in MPa
     pub inlet_pressure: f64,
     /// Inlet temperature in Kelvin
     pub inlet_temperature: f64,
     /// Pressure ratio (outlet/inlet, must be 0 < PR < 1.0)
     pub pressure_ratio: f64,
+    /// Compositional stream in place of `fluid`: components, mole fractions, cubic
+    /// equation of state and `mass_rate` (kg/s), which sets the flow.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
+    /// Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw` the
+    /// dry GERG-2008 gas. Give this or `composition`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fluid: Option<serde_json::Value>,
+    /// Isentropic efficiency (0–1), in place of `polytropic_efficiency`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub isentropic_efficiency: Option<f64>,
     /// Mechanical efficiency (0–1, default: 0.95)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mechanical_efficiency: Option<f64>,
+    /// Path method (default huntington_3point): ideal_gas_exact, schultz
+    /// (compressor only), sandberg_colby_endpoint, huntington_2point,
+    /// huntington_3point, huntington_4point, reference_2017, reference_1985,
+    /// hundseid_small_stage, improved_hundseid, sandberg_colby_multistep,
+    /// taher_evans_cubic, sandberg_colby_huntington_weyermann.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
     /// Polytropic efficiency (0–1, default: 0.80). Native parameter of the turbo
     /// centrifugal expander model. The result reports both the polytropic and the
     /// back-computed isentropic efficiency.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub polytropic_efficiency: Option<f64>,
+}
+
+/// Arguments for [`GraphSolve::calculate_turbo_machine`](crate::GraphSolve::calculate_turbo_machine).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CalculateTurboMachineParams {
+    /// Inlet (suction) pressure in MPa
+    pub inlet_pressure: f64,
+    /// Inlet (suction) temperature in Kelvin
+    pub inlet_temperature: f64,
+    /// The machine, tagged by `kind`, exactly as on a network compressor or turbine
+    /// edge. Every kind takes an optional path `method` (default
+    /// huntington_3point).
+    pub turbo_machine: serde_json::Value,
+    /// Compositional stream: components, mole fractions, equation of state and
+    /// `mass_rate` (kg/s). Give this or `fluid`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub composition: Option<serde_json::Value>,
+    /// Discharge pressure in MPa, for a positive-displacement machine solved for
+    /// its capacity. Give this or a flow, not both.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub discharge_pressure: Option<f64>,
+    /// Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw` the
+    /// GERG-2008 gas. Give this or `composition`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fluid: Option<serde_json::Value>,
+    /// Mechanical efficiency (0–1, default 0.95), for machines whose result carries
+    /// no shaft power of its own.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mechanical_efficiency: Option<f64>,
+    /// Compressor (default) or expander.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<TurboModeName>,
 }
 
 /// Arguments for [`GraphSolve::calculate_volumetrics`](crate::GraphSolve::calculate_volumetrics).
@@ -2956,6 +3149,24 @@ impl GraphSolve {
         self.call("allocate_production", &params).await
     }
 
+    /// Back-calculate head, efficiencies and powers from measured suction and
+    /// discharge states by path method, and fit a turbo_machine map to the
+    /// points.
+    ///
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::SolverDidNotConverge`](crate::Error::SolverDidNotConverge)
+    /// when the calculation ran and produced no answer, which is charged.
+    /// Every other variant means nothing was computed and nothing was billed.
+    pub async fn analyse_turbo_performance(
+        &self,
+        params: AnalyseTurboPerformanceParams,
+    ) -> Result<ToolResponse> {
+        self.call("analyse_turbo_performance", &params).await
+    }
+
     /// Straight-line material-balance diagnostics: gas p/Z → OGIP, or Havlena-
     /// Odeh F-vs-Et → STOIIP/GIIP, with R² and drive-support intercept.
     ///
@@ -2993,7 +3204,7 @@ impl GraphSolve {
     /// Pressure drop across a choke of known diameter at given rates (Sachdeva
     /// multiphase model, critical/subcritical).
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3024,10 +3235,28 @@ impl GraphSolve {
         self.call("calculate_choke_size", &params).await
     }
 
+    /// Compression train on a composition: per stage a turbo machine, an
+    /// intercooler on the EOS enthalpy and a scrubber that removes the
+    /// condensed liquid; stage and train power, duty, liquid and compositions.
+    ///
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::SolverDidNotConverge`](crate::Error::SolverDidNotConverge)
+    /// when the calculation ran and produced no answer, which is charged.
+    /// Every other variant means nothing was computed and nothing was billed.
+    pub async fn calculate_compression_train(
+        &self,
+        params: CalculateCompressionTrainParams,
+    ) -> Result<ToolResponse> {
+        self.call("calculate_compression_train", &params).await
+    }
+
     /// Single-stage centrifugal compressor: outlet P/T and power from inlet
     /// P/T, pressure ratio, and polytropic efficiency.
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3132,7 +3361,7 @@ impl GraphSolve {
     /// fixed_outlet_temperature, approach_temperature or ua mode; returns
     /// outlet P/T and duty.
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3167,7 +3396,7 @@ impl GraphSolve {
     /// Outlet temperature after a constant-enthalpy (Joule-Thomson) expansion
     /// to a lower pressure.
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3185,7 +3414,7 @@ impl GraphSolve {
     /// Joule-Thomson throttle valve: outlet T after an isenthalpic pressure
     /// drop.
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3231,7 +3460,7 @@ impl GraphSolve {
     /// stage pressure ratios and overall discharge P/T, cooler duty and shaft
     /// power.
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3318,7 +3547,7 @@ impl GraphSolve {
     /// discharge P/T, head, power, NPSH, per-section operating range and the
     /// ESP drive train.
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3367,7 +3596,7 @@ impl GraphSolve {
     /// Reciprocating (positive-displacement) compressor. Mass flow is set by
     /// displacement x speed x volumetric efficiency, not supplied.
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3419,7 +3648,7 @@ impl GraphSolve {
     /// efficiencies; mass flow = volumetric efficiency x suction density x
     /// displacement per revolution x shaft speed in rev/s.
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3436,7 +3665,7 @@ impl GraphSolve {
     /// Single-stage centrifugal turbine/expander: outlet P/T and power
     /// generated from inlet P/T and an expansion pressure ratio (0 < PR < 1).
     ///
-    /// Costs 1 credit.
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
     ///
     /// # Errors
     ///
@@ -3445,6 +3674,24 @@ impl GraphSolve {
     /// Every other variant means nothing was computed and nothing was billed.
     pub async fn calculate_turbine(&self, params: CalculateTurbineParams) -> Result<ToolResponse> {
         self.call("calculate_turbine", &params).await
+    }
+
+    /// Any network turbo machine (centrifugal simple/mapped/map/multistage,
+    /// axial, screw, reciprocating) at one operating point, on a GERG gas or an
+    /// EOS composition, with a chosen path method.
+    ///
+    /// Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::SolverDidNotConverge`](crate::Error::SolverDidNotConverge)
+    /// when the calculation ran and produced no answer, which is charged.
+    /// Every other variant means nothing was computed and nothing was billed.
+    pub async fn calculate_turbo_machine(
+        &self,
+        params: CalculateTurboMachineParams,
+    ) -> Result<ToolResponse> {
+        self.call("calculate_turbo_machine", &params).await
     }
 
     /// Forward OOIP / OGIP from area·thickness·NTG·φ·(1−Sw) ÷ FVF; scalar or

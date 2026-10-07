@@ -14,7 +14,7 @@ import { GraphSolve } from "@graphsolve/sdk";
 
 const gs = new GraphSolve();
 
-// Any of the 98 tools, typed
+// Any of the 101 tools, typed
 const result = await gs.solve_network({ network_json: model });
 console.log(result.metadata?.billing?.credits_charged);
 

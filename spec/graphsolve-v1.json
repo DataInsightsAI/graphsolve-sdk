@@ -1,6 +1,956 @@
 {
   "components": {
     "schemas": {
+      "ApiAxialMap": {
+        "description": "Axial performance map (corrected speed lines + reference + boundaries).",
+        "properties": {
+          "choke_boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiCurve"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Choke boundary: x = n_c [rad/s], y = W_c [kg/s]."
+          },
+          "max_discharge_t_total": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "reference_conditions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiReferenceConditions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "speed_lines": {
+            "items": {
+              "$ref": "#/components/schemas/ApiCorrectedSpeedLine"
+            },
+            "type": "array"
+          },
+          "surge_boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiCurve"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Surge boundary: x = n_c [rad/s], y = W_c [kg/s]."
+          }
+        },
+        "required": [
+          "speed_lines"
+        ],
+        "type": "object"
+      },
+      "ApiAxialStage": {
+        "description": "One stage of an axial stage-stacked train.",
+        "properties": {
+          "axial_map": {
+            "$ref": "#/components/schemas/ApiAxialMap"
+          },
+          "bleed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiBleed"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "injection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiInjection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reynolds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiReynolds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "axial_map"
+        ],
+        "type": "object"
+      },
+      "ApiBleed": {
+        "properties": {
+          "fraction": {
+            "description": "Bled fraction of through-flow [-] (0..1).",
+            "format": "double",
+            "type": "number"
+          },
+          "name": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fraction"
+        ],
+        "type": "object"
+      },
+      "ApiCentrifugalSpeedLine": {
+        "description": "One constant-speed line of a multi-speed centrifugal map.",
+        "properties": {
+          "efficiency_curve": {
+            "$ref": "#/components/schemas/ApiCurve",
+            "description": "Efficiency η(Q): x = inlet volume flow [m³/s], y = η [-]."
+          },
+          "head_curve": {
+            "$ref": "#/components/schemas/ApiCurve",
+            "description": "Head H(Q): x = inlet volume flow [m³/s], y = polytropic head [J/kg]."
+          },
+          "power_curve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiCurve"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional power P(Q): x = inlet volume flow [m³/s], y = power [W]."
+          },
+          "shaft_speed": {
+            "description": "Shaft speed [rad/s].",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "shaft_speed",
+          "head_curve",
+          "efficiency_curve"
+        ],
+        "type": "object"
+      },
+      "ApiClearanceModel": {
+        "properties": {
+          "clip_eta_v": {
+            "default": true,
+            "type": "boolean"
+          },
+          "default_reexpansion_exponent": {
+            "default": 1.3,
+            "format": "double",
+            "type": "number"
+          },
+          "eta_v_max": {
+            "default": 1.05,
+            "format": "double",
+            "type": "number"
+          },
+          "eta_v_min": {
+            "default": 0.0,
+            "format": "double",
+            "type": "number"
+          },
+          "use_real_gas_z_correction": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ApiCooler": {
+        "description": "Inter-stage cooler. Exactly one target should be set.",
+        "properties": {
+          "pressure_drop_mpa": {
+            "default": 0.0,
+            "description": "Pressure drop across the cooler [MPa].",
+            "format": "double",
+            "type": "number"
+          },
+          "target_specific_duty_j_per_kg": {
+            "description": "Target specific cooling duty [J/kg] (alternative to temperature).",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "target_temperature_k": {
+            "description": "Target cooler outlet temperature [K].",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "ApiCorrectedSpeedLine": {
+        "description": "One corrected-speed line of an axial map.",
+        "properties": {
+          "eta_p_tt": {
+            "$ref": "#/components/schemas/ApiCurve",
+            "description": "η(W_c): x = corrected mass flow [kg/s], y = polytropic efficiency [-]."
+          },
+          "n_c": {
+            "description": "Corrected shaft speed [rad/s].",
+            "format": "double",
+            "type": "number"
+          },
+          "pressure_ratio": {
+            "$ref": "#/components/schemas/ApiCurve",
+            "description": "PR(W_c): x = corrected mass flow [kg/s], y = pressure ratio [-]."
+          }
+        },
+        "required": [
+          "n_c",
+          "pressure_ratio",
+          "eta_p_tt"
+        ],
+        "type": "object"
+      },
+      "ApiCurve": {
+        "description": "A performance curve as raw (x, y) arrays with its interpolation and\nextrapolation policy.",
+        "properties": {
+          "extrapolation": {
+            "description": "`\"clamp\"` (safe, default) | `\"linear\"` | `\"error\"`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "interpolation": {
+            "description": "`\"pchip\"` (C1, default) | `\"linear\"`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "x": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "x_units": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "y": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "y_units": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "x",
+          "y"
+        ],
+        "type": "object"
+      },
+      "ApiCylinderEnd": {
+        "properties": {
+          "active": {
+            "default": true,
+            "type": "boolean"
+          },
+          "added_clearance_ratio": {
+            "default": 0.0,
+            "format": "double",
+            "type": "number"
+          },
+          "bore_m": {
+            "default": 0.15,
+            "format": "double",
+            "type": "number"
+          },
+          "clearance_ratio": {
+            "default": 0.08,
+            "format": "double",
+            "type": "number"
+          },
+          "cylinder_id": {
+            "default": "",
+            "type": "string"
+          },
+          "end_id": {
+            "description": "`\"head_end\"` (default) | `\"crank_end\"`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "leakage_factor": {
+            "default": 1.0,
+            "format": "double",
+            "type": "number"
+          },
+          "rod_diameter_m": {
+            "default": 0.0,
+            "format": "double",
+            "type": "number"
+          },
+          "stroke_m": {
+            "default": 0.12,
+            "format": "double",
+            "type": "number"
+          },
+          "suction_heating_factor": {
+            "default": 1.0,
+            "format": "double",
+            "type": "number"
+          },
+          "suction_valve_unloaded": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ApiInjection": {
+        "properties": {
+          "mass_flow": {
+            "description": "Injected mass flow [kg/s].",
+            "format": "double",
+            "type": "number"
+          },
+          "tt_inject": {
+            "description": "Injected stream total temperature [K].",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "mass_flow",
+          "tt_inject"
+        ],
+        "type": "object"
+      },
+      "ApiLeakageCds": {
+        "properties": {
+          "cd_back": {
+            "default": 0.6,
+            "format": "double",
+            "type": "number"
+          },
+          "cd_blowhole": {
+            "default": 0.85,
+            "format": "double",
+            "type": "number"
+          },
+          "cd_discharge": {
+            "default": 0.85,
+            "format": "double",
+            "type": "number"
+          },
+          "cd_endface": {
+            "default": 0.7,
+            "format": "double",
+            "type": "number"
+          },
+          "cd_mesh": {
+            "default": 0.85,
+            "format": "double",
+            "type": "number"
+          },
+          "cd_suction": {
+            "default": 0.85,
+            "format": "double",
+            "type": "number"
+          },
+          "cd_tip": {
+            "default": 0.7,
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "ApiMapReference": {
+        "description": "Inlet conditions a centrifugal map was measured at.",
+        "properties": {
+          "mw_ref": {
+            "description": "Reference gas molecular weight [g/mol].",
+            "format": "double",
+            "type": "number"
+          },
+          "t_ref": {
+            "description": "Reference inlet temperature [K].",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "t_ref",
+          "mw_ref"
+        ],
+        "type": "object"
+      },
+      "ApiMechanisticOptions": {
+        "properties": {
+          "max_step": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "n_eval_points": {
+            "default": 200,
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ApiOilFloodedParams": {
+        "properties": {
+          "c_p_oil": {
+            "default": 2050.0,
+            "format": "double",
+            "type": "number"
+          },
+          "mass_flow_oil": {
+            "format": "double",
+            "type": "number"
+          },
+          "tt_oil_inlet": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "mass_flow_oil",
+          "tt_oil_inlet"
+        ],
+        "type": "object"
+      },
+      "ApiPressureLoss": {
+        "properties": {
+          "discharge_dp_mpa": {
+            "default": 0.0,
+            "description": "Discharge-side pressure loss [MPa].",
+            "format": "double",
+            "type": "number"
+          },
+          "suction_dp_mpa": {
+            "default": 0.0,
+            "description": "Suction-side pressure loss [MPa].",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "ApiReciprocatingSpec": {
+        "properties": {
+          "driver_power_limit_w": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_discharge_temperature_k": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_final_discharge_pressure_mpa": {
+            "description": "Train-level final discharge pressure cap [MPa].",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "mechanical_efficiency": {
+            "default": 0.95,
+            "format": "double",
+            "type": "number"
+          },
+          "name": {
+            "default": "",
+            "type": "string"
+          },
+          "speed_rpm": {
+            "format": "double",
+            "type": "number"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/ApiStageSpec"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "stages",
+          "speed_rpm"
+        ],
+        "type": "object"
+      },
+      "ApiReferenceConditions": {
+        "description": "ISO-3977 reference conditions for axial corrected quantities.",
+        "properties": {
+          "p_ref": {
+            "default": 0.101325,
+            "description": "Reference pressure [MPa] (default 0.101325 when omitted).",
+            "format": "double",
+            "type": "number"
+          },
+          "t_ref": {
+            "default": 288.15,
+            "description": "Reference temperature [K] (default 288.15).",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "ApiReynolds": {
+        "properties": {
+          "a": {
+            "default": 0.3,
+            "format": "double",
+            "type": "number"
+          },
+          "b": {
+            "default": 0.2,
+            "format": "double",
+            "type": "number"
+          },
+          "re": {
+            "format": "double",
+            "type": "number"
+          },
+          "re_ref": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "re",
+          "re_ref"
+        ],
+        "type": "object"
+      },
+      "ApiScrewGeometry": {
+        "description": "Parametric sinusoidal twin-screw geometry.",
+        "properties": {
+          "back_leak_area": {
+            "format": "double",
+            "type": "number"
+          },
+          "blowhole_area": {
+            "format": "double",
+            "type": "number"
+          },
+          "built_in_volume_ratio": {
+            "format": "double",
+            "type": "number"
+          },
+          "discharge_port_area": {
+            "format": "double",
+            "type": "number"
+          },
+          "discharge_ramp_fraction": {
+            "format": "double",
+            "type": "number"
+          },
+          "displacement_per_rev": {
+            "format": "double",
+            "type": "number"
+          },
+          "endface_clearance": {
+            "format": "double",
+            "type": "number"
+          },
+          "intermesh_clearance": {
+            "format": "double",
+            "type": "number"
+          },
+          "male_lobe_count": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "rotor_length": {
+            "format": "double",
+            "type": "number"
+          },
+          "suction_port_area": {
+            "format": "double",
+            "type": "number"
+          },
+          "suction_ramp_fraction": {
+            "format": "double",
+            "type": "number"
+          },
+          "tip_clearance": {
+            "format": "double",
+            "type": "number"
+          },
+          "v_min_fraction": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "displacement_per_rev",
+          "built_in_volume_ratio",
+          "male_lobe_count",
+          "rotor_length",
+          "tip_clearance",
+          "intermesh_clearance",
+          "blowhole_area",
+          "endface_clearance",
+          "back_leak_area",
+          "suction_port_area",
+          "discharge_port_area",
+          "suction_ramp_fraction",
+          "discharge_ramp_fraction",
+          "v_min_fraction"
+        ],
+        "type": "object"
+      },
+      "ApiScrewMap": {
+        "properties": {
+          "eta_mechanical": {
+            "default": 0.95,
+            "format": "double",
+            "type": "number"
+          },
+          "max_discharge_t": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "speed_lines": {
+            "items": {
+              "$ref": "#/components/schemas/ApiScrewMapSpeedLine"
+            },
+            "type": "array"
+          },
+          "subtype": {
+            "description": "`\"dry\"` | `\"oil_flooded\"` | `\"water_injected\"`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "speed_lines"
+        ],
+        "type": "object"
+      },
+      "ApiScrewMapSpeedLine": {
+        "description": "One constant-speed line of a screw map (2-D (Ps,Pd) grids).",
+        "properties": {
+          "m_dot": {
+            "description": "Mass flow [kg/s], indexed `[i_ps][j_pd]`.",
+            "items": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "omega": {
+            "description": "Shaft speed [rad/s].",
+            "format": "double",
+            "type": "number"
+          },
+          "p_d_grid": {
+            "description": "Discharge pressure grid [MPa] (ascending, ≥2).",
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "p_s_grid": {
+            "description": "Suction pressure grid [MPa] (ascending, ≥2).",
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "p_shaft": {
+            "description": "Shaft power [W], indexed `[i_ps][j_pd]`.",
+            "items": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "t_d": {
+            "description": "Optional discharge temperature [K], indexed `[i_ps][j_pd]`.",
+            "items": {
+              "items": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "omega",
+          "p_s_grid",
+          "p_d_grid",
+          "m_dot",
+          "p_shaft"
+        ],
+        "type": "object"
+      },
+      "ApiStage": {
+        "description": "One centrifugal stage (simple OR mapped).",
+        "properties": {
+          "compressor_pressure_ratio": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "efficiency_curve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiCurve"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "head_curve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiCurve"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "minimum_inlet_volume_flow": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "polytropic_efficiency": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "power_curve": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiCurve"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "power_curve_basis": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pressure_max": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pressure_min": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "recycle_max_iterations": {
+            "description": "Anti-surge recycle bisection cap (default 25). Only used when\n`minimum_inlet_volume_flow` triggers recycle.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "recycle_tolerance": {
+            "description": "Relative tolerance on the recycle Q target (default 1e-6).",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "ApiStageCooler": {
+        "properties": {
+          "enabled": {
+            "default": true,
+            "type": "boolean"
+          },
+          "outlet_temperature_k": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "pressure_drop_mpa": {
+            "default": 0.0,
+            "description": "Pressure drop across the after-stage cooler [MPa].",
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "ApiStageSpec": {
+        "properties": {
+          "cooler_after_stage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiStageCooler"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cylinder_ends": {
+            "items": {
+              "$ref": "#/components/schemas/ApiCylinderEnd"
+            },
+            "type": "array"
+          },
+          "max_discharge_pressure_mpa": {
+            "description": "Per-stage discharge pressure cap [MPa].",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_discharge_temperature_k": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "max_pressure_ratio": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "polytropic_efficiency": {
+            "default": 0.78,
+            "format": "double",
+            "type": "number"
+          },
+          "pressure_losses": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiPressureLoss"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reexpansion_exponent": {
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "stage_id": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cylinder_ends"
+        ],
+        "type": "object"
+      },
       "BipInput": {
         "additionalProperties": false,
         "description": "Binary interaction parameter for one component pair, keyed by the\ncomponent names of the request.",
@@ -179,6 +1129,73 @@
           "critical_temperature",
           "critical_pressure",
           "acentric_factor"
+        ],
+        "type": "object"
+      },
+      "CompositionInputParams": {
+        "additionalProperties": false,
+        "description": "A stream described by its composition and a cubic equation of state, in\nplace of the black-oil `fluid`.",
+        "properties": {
+          "binary_interactions": {
+            "description": "Binary interaction overrides.",
+            "items": {
+              "$ref": "#/components/schemas/BipInput"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "component_names": {
+            "description": "Component names from the built-in database (e.g. \"methane\", \"CO2\",\n\"n-decane\"). Give these or `components`, not both.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "components": {
+            "description": "Full component definitions, for components not in the database.",
+            "items": {
+              "$ref": "#/components/schemas/ComponentDef"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "eos_model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EosModelName"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Equation of state (default Peng-Robinson)."
+          },
+          "mass_rate": {
+            "description": "Mass rate of the whole stream in kg/s. Required by tools whose result\ndepends on the flow.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "mole_fractions": {
+            "description": "Mole fractions, one per component, summing to 1.",
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "mole_fractions"
         ],
         "type": "object"
       },
@@ -868,6 +1885,63 @@
           }
         ]
       },
+      "MeasuredPointParams": {
+        "additionalProperties": false,
+        "description": "One measured operating point.",
+        "properties": {
+          "inlet_pressure": {
+            "description": "Suction (inlet) pressure in MPa",
+            "format": "double",
+            "type": "number"
+          },
+          "inlet_temperature": {
+            "description": "Suction (inlet) temperature in Kelvin",
+            "format": "double",
+            "type": "number"
+          },
+          "mass_rate": {
+            "description": "Mass flow in kg/s. Gives inlet volume flow and fluid power, and is\nneeded for a fitted map.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "outlet_pressure": {
+            "description": "Discharge (outlet) pressure in MPa",
+            "format": "double",
+            "type": "number"
+          },
+          "outlet_temperature": {
+            "description": "Discharge (outlet) temperature in Kelvin",
+            "format": "double",
+            "type": "number"
+          },
+          "shaft_power": {
+            "description": "Measured shaft power in W, as a positive magnitude (absorbed by a\ncompressor, delivered by an expander). Gives the mechanical and overall\nefficiencies.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "shaft_speed": {
+            "description": "Shaft speed in rad/s. Points sharing a speed form one speed line of a\nfitted multi-speed map.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "inlet_pressure",
+          "inlet_temperature",
+          "outlet_pressure",
+          "outlet_temperature"
+        ],
+        "type": "object"
+      },
       "OilCompressibilityCorrelationName": {
         "description": "Isothermal oil compressibility correlation.",
         "oneOf": [
@@ -1451,6 +2525,13 @@
         "additionalProperties": false,
         "description": "One stage of a multi-stage centrifugal compressor.",
         "properties": {
+          "method": {
+            "description": "Path method for this stage, overriding the train's `method`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "polytropic_efficiency": {
             "description": "Stage polytropic efficiency (0-1, default: 0.78).",
             "format": "double",
@@ -1547,6 +2628,693 @@
           "errors"
         ],
         "type": "object"
+      },
+      "TrainStage": {
+        "additionalProperties": false,
+        "description": "One stage of a compression train: a machine, then an optional cooler,\nthen an optional scrubber that removes the liquid the cooler condensed.",
+        "properties": {
+          "cooler": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiCooler"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Cooler after the machine: a target outlet temperature, or a specific\nduty removed (J/kg), with its pressure drop (MPa). The balance is on the\nEOS enthalpy, so condensation counts."
+          },
+          "knockout": {
+            "default": true,
+            "description": "Scrub the stage outlet (after its cooler): flash it and send only the\nvapour to the next stage. Default true.",
+            "type": "boolean"
+          },
+          "mechanical_efficiency": {
+            "description": "Mechanical efficiency (0–1, default 0.95), for machines whose result\ncarries no shaft power of its own.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "turbo_machine": {
+            "$ref": "#/components/schemas/TurboMachineConfig",
+            "description": "The stage's machine, as on a network compressor edge. It must close on\nthe mass flow: any centrifugal or axial kind, or a reciprocating one."
+          }
+        },
+        "required": [
+          "turbo_machine"
+        ],
+        "type": "object"
+      },
+      "TurboMachineConfig": {
+        "description": "A turbo machine definition, tagged by `kind`. It holds the machine only:\nthe operating point (inlet pressure and temperature, mass flow, discharge\npressure) comes from the network or the calling tool. Dynamic machines\n(centrifugal, axial) set the discharge pressure from the flow;\npositive-displacement machines (screw, reciprocating) set the flow from the\nsuction and discharge pressures.\n\nEvery kind takes an optional path `method`: ideal_gas_exact, schultz,\nsandberg_colby_endpoint, huntington_2point, huntington_3point (default),\nhuntington_4point, reference_2017, reference_1985, hundseid_small_stage,\nimproved_hundseid, sandberg_colby_multistep, taher_evans_cubic or\nsandberg_colby_huntington_weyermann. Schultz is compressor only.",
+        "oneOf": [
+          {
+            "description": "Centrifugal, fixed PR (compressor) / ER (expander) + polytropic efficiency.",
+            "properties": {
+              "compressor_pressure_ratio": {
+                "description": "Discharge over suction pressure, `P_out/P_in`, greater than 1.\nCompressor edges only; rejected on a turbine edge.",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "expander_expansion_ratio": {
+                "description": "Inlet over outlet pressure, `P_in/P_out`, greater than 1. Required on\na turbine edge.",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "kind": {
+                "const": "centrifugal_simple",
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "polytropic_efficiency": {
+                "format": "double",
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind",
+              "polytropic_efficiency"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Simple (equivalent single-stage) reciprocating compressor.",
+            "properties": {
+              "clearance_ratio": {
+                "format": "double",
+                "type": "number"
+              },
+              "kind": {
+                "const": "reciprocating_simple",
+                "type": "string"
+              },
+              "max_pressure_ratio": {
+                "default": 12.0,
+                "format": "double",
+                "type": "number"
+              },
+              "mechanical_efficiency": {
+                "default": 0.95,
+                "format": "double",
+                "type": "number"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "min_pressure_ratio": {
+                "default": 1.0001,
+                "format": "double",
+                "type": "number"
+              },
+              "polytropic_efficiency": {
+                "default": 0.78,
+                "format": "double",
+                "type": "number"
+              },
+              "speed_rpm": {
+                "format": "double",
+                "type": "number"
+              },
+              "swept_volume_per_rev_m3": {
+                "format": "double",
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind",
+              "swept_volume_per_rev_m3",
+              "clearance_ratio",
+              "speed_rpm"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Simple positive-displacement screw closed by black-box efficiencies.",
+            "properties": {
+              "displacement_per_rev": {
+                "format": "double",
+                "type": "number"
+              },
+              "eta_internal_polytropic": {
+                "default": 0.78,
+                "format": "double",
+                "type": "number"
+              },
+              "eta_mechanical": {
+                "default": 0.95,
+                "format": "double",
+                "type": "number"
+              },
+              "eta_volumetric": {
+                "format": "double",
+                "type": "number"
+              },
+              "kind": {
+                "const": "screw_simple_pd",
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "shaft_speed": {
+                "format": "double",
+                "type": "number"
+              },
+              "subtype": {
+                "description": "`\"dry\"` | `\"oil_flooded\"` | `\"water_injected\"` (default dry).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "displacement_per_rev",
+              "shaft_speed",
+              "eta_volumetric"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Single-speed centrifugal performance map (head + efficiency + optional power curves).",
+            "properties": {
+              "efficiency_curve": {
+                "$ref": "#/components/schemas/ApiCurve"
+              },
+              "head_curve": {
+                "$ref": "#/components/schemas/ApiCurve"
+              },
+              "kind": {
+                "const": "centrifugal_mapped",
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "power_curve": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiCurve"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "power_curve_basis": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "power_warning_threshold": {
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "pressure_max": {
+                "description": "Discharge-pressure ceiling guard [MPa].",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "pressure_min": {
+                "description": "Discharge-pressure floor guard [MPa].",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "head_curve",
+              "efficiency_curve"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Multi-speed centrifugal performance map.",
+            "properties": {
+              "choke_margin_warn": {
+                "description": "Fractional choke margin below which a warning fires (default 0.05).",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "kind": {
+                "const": "centrifugal_map",
+                "type": "string"
+              },
+              "max_discharge_t": {
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "power_curve_basis": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "power_warning_threshold": {
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "pressure_max": {
+                "description": "Discharge-pressure ceiling guard [MPa].",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "pressure_min": {
+                "description": "Discharge-pressure floor guard [MPa].",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "reference": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiMapReference"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Inlet conditions the map was measured at; enables `similarity`."
+              },
+              "shaft_speed": {
+                "format": "double",
+                "type": "number"
+              },
+              "similarity": {
+                "description": "`\"none\"` (default) | `\"corrected_speed\"` | `\"mach\"`.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "speed_lines": {
+                "items": {
+                  "$ref": "#/components/schemas/ApiCentrifugalSpeedLine"
+                },
+                "type": "array"
+              },
+              "speed_policy": {
+                "description": "`\"affinity\"` (default) | `\"linear\"`.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "stonewall_boundary": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiCurve"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "surge_boundary": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiCurve"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "surge_margin_error": {
+                "description": "Fractional surge margin below which an error fires (default 0.05).",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "surge_margin_warn": {
+                "description": "Fractional surge margin below which a warning fires (default 0.10).",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "speed_lines",
+              "shaft_speed"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Centrifugal multi-stage train with optional inter-stage coolers.",
+            "properties": {
+              "coolers": {
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiCooler"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              "kind": {
+                "const": "centrifugal_multistage",
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "power_basis": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "stages": {
+                "items": {
+                  "$ref": "#/components/schemas/ApiStage"
+                },
+                "type": "array"
+              },
+              "total_power": {
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "stages"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Single axial whole-map evaluation.",
+            "properties": {
+              "axial_map": {
+                "$ref": "#/components/schemas/ApiAxialMap"
+              },
+              "choke_margin_warn": {
+                "description": "Fractional choke margin below which a warning fires (default 0.05).",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "kind": {
+                "const": "axial_whole_map",
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "shaft_speed": {
+                "format": "double",
+                "type": "number"
+              },
+              "surge_margin_error": {
+                "description": "Fractional surge margin below which an error fires (default 0.05).",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "surge_margin_warn": {
+                "description": "Fractional surge margin below which a warning fires (default 0.10).",
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "axial_map",
+              "shaft_speed"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Multi-stage axial train (stage-stacked).",
+            "properties": {
+              "kind": {
+                "const": "axial_stage_stacked",
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "shaft_speed": {
+                "format": "double",
+                "type": "number"
+              },
+              "stages": {
+                "items": {
+                  "$ref": "#/components/schemas/ApiAxialStage"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "kind",
+              "stages",
+              "shaft_speed"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Map-driven screw (2-D (Ps,Pd) grids per speed line).",
+            "properties": {
+              "kind": {
+                "const": "screw_map_driven",
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "screw_map": {
+                "$ref": "#/components/schemas/ApiScrewMap"
+              },
+              "shaft_speed": {
+                "description": "Operating shaft speed [rad/s] (interpolated across the map's speed lines).",
+                "format": "double",
+                "type": "number"
+              }
+            },
+            "required": [
+              "kind",
+              "screw_map",
+              "shaft_speed"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Mechanistic (chamber-ODE) screw model from parametric geometry.",
+            "properties": {
+              "eta_mechanical": {
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "geometry": {
+                "$ref": "#/components/schemas/ApiScrewGeometry"
+              },
+              "kind": {
+                "const": "screw_mechanistic",
+                "type": "string"
+              },
+              "leakage_cds": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiLeakageCds"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "oil": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiOilFloodedParams"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "options": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiMechanisticOptions"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "shaft_speed": {
+                "format": "double",
+                "type": "number"
+              },
+              "subtype": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "geometry",
+              "shaft_speed"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Rigorous multi-stage reciprocating compressor.",
+            "properties": {
+              "capacity_model": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ApiClearanceModel"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "default_stage_max_pressure_ratio": {
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "kind": {
+                "const": "reciprocating_rigorous",
+                "type": "string"
+              },
+              "method": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "min_pressure_ratio": {
+                "format": "double",
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "spec": {
+                "$ref": "#/components/schemas/ApiReciprocatingSpec"
+              }
+            },
+            "required": [
+              "kind",
+              "spec"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "TurboModeName": {
+        "description": "Whether the machine compresses or expands the gas.",
+        "oneOf": [
+          {
+            "const": "compressor",
+            "description": "Compressor (default).",
+            "type": "string"
+          },
+          {
+            "const": "expander",
+            "description": "Expander / turbine. Only centrifugal and axial machines expand.",
+            "type": "string"
+          }
+        ]
       },
       "WaterAnalysisParams": {
         "additionalProperties": false,
@@ -1701,7 +3469,7 @@
       "name": "Proprietary"
     },
     "title": "GraphSolve Engine API",
-    "version": "1.0.40"
+    "version": "1.0.42"
   },
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "openapi": "3.1.0",
@@ -2687,6 +4455,259 @@
         }
       }
     },
+    "/v1/tools/analyse_turbo_performance": {
+      "post": {
+        "description": "Back-calculate head, efficiencies and powers from measured suction and discharge states by path method, and fit a turbo_machine map to the points.",
+        "operationId": "analyse_turbo_performance",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "three test points, two methods, GERG gas": {
+                  "value": {
+                    "gas_molecular_weight": 18.5,
+                    "methods": [
+                      "huntington_3point",
+                      "schultz"
+                    ],
+                    "points": [
+                      {
+                        "inlet_pressure": 4.0,
+                        "inlet_temperature": 300.0,
+                        "mass_rate": 8.0,
+                        "outlet_pressure": 8.6,
+                        "outlet_temperature": 372.0,
+                        "shaft_power": 1180000.0
+                      },
+                      {
+                        "inlet_pressure": 4.0,
+                        "inlet_temperature": 300.0,
+                        "mass_rate": 10.0,
+                        "outlet_pressure": 8.0,
+                        "outlet_temperature": 364.0,
+                        "shaft_power": 1340000.0
+                      },
+                      {
+                        "inlet_pressure": 4.0,
+                        "inlet_temperature": 300.0,
+                        "mass_rate": 12.0,
+                        "outlet_pressure": 7.2,
+                        "outlet_temperature": 358.0,
+                        "shaft_power": 1450000.0
+                      }
+                    ]
+                  }
+                },
+                "two speed lines on a lean-gas composition": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "propane"
+                      ],
+                      "mole_fractions": [
+                        0.9,
+                        0.07,
+                        0.03
+                      ]
+                    },
+                    "points": [
+                      {
+                        "inlet_pressure": 4.0,
+                        "inlet_temperature": 300.0,
+                        "mass_rate": 8.0,
+                        "outlet_pressure": 7.6,
+                        "outlet_temperature": 358.0,
+                        "shaft_speed": 1000.0
+                      },
+                      {
+                        "inlet_pressure": 4.0,
+                        "inlet_temperature": 300.0,
+                        "mass_rate": 11.0,
+                        "outlet_pressure": 7.0,
+                        "outlet_temperature": 352.0,
+                        "shaft_speed": 1000.0
+                      },
+                      {
+                        "inlet_pressure": 4.0,
+                        "inlet_temperature": 300.0,
+                        "mass_rate": 10.0,
+                        "outlet_pressure": 9.0,
+                        "outlet_temperature": 375.0,
+                        "shaft_speed": 1200.0
+                      },
+                      {
+                        "inlet_pressure": 4.0,
+                        "inlet_temperature": 300.0,
+                        "mass_rate": 13.0,
+                        "outlet_pressure": 8.2,
+                        "outlet_temperature": 367.0,
+                        "shaft_speed": 1200.0
+                      }
+                    ]
+                  }
+                }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "Input for analysing a machine's measured operating points. Each point gives\nthe suction and discharge pressure and temperature, and optionally the mass\nrate, shaft power and shaft speed. Each requested path method back-calculates\nthe head and efficiencies the machine achieved. The gas is either a GERG-2008\ngas (`gas_molecular_weight` and impurity fractions) or a `composition` (its\n`mass_rate` is left unset; rates are per point).",
+                "properties": {
+                  "co2_fraction": {
+                    "description": "GERG gas CO2 mole fraction (default 0).",
+                    "format": "double",
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional gas, in place of the GERG gas."
+                  },
+                  "gas_molecular_weight": {
+                    "description": "GERG gas molecular weight in g/mol (default 20.279).",
+                    "format": "double",
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "h2s_fraction": {
+                    "description": "GERG gas H2S mole fraction (default 0).",
+                    "format": "double",
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "methods": {
+                    "description": "Path methods to compare (default [\"huntington_3point\"]): ideal_gas_exact,\nschultz, sandberg_colby_endpoint, huntington_2point, huntington_3point,\nhuntington_4point, reference_2017, reference_1985, hundseid_small_stage,\nimproved_hundseid, sandberg_colby_multistep, taher_evans_cubic,\nsandberg_colby_huntington_weyermann. The first one fits the map.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": [
+                      "array",
+                      "null"
+                    ]
+                  },
+                  "mode": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/TurboModeName"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compressor (default) or expander."
+                  },
+                  "n2_fraction": {
+                    "description": "GERG gas N2 mole fraction (default 0).",
+                    "format": "double",
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "points": {
+                    "description": "The measured points.",
+                    "items": {
+                      "$ref": "#/components/schemas/MeasuredPointParams"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "points"
+                ],
+                "title": "TurboPerformanceParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The tool ran. `status` is `success`, or `error` with `failure_kind: computation_failed` when the calculation itself produced no answer — which is a real result and IS charged."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Invalid input. The payload was malformed or semantically wrong; nothing was computed and no credits were charged. `failure_kind` is `invalid_input`."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired access token."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The access token lacks the scope this tool needs: `engine:read` for free lookups, `engine:solve` for anything that runs a calculation."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Internal error. Never charged."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The dispatch layer failed before or during the call. Never charged; safe to retry."
+          }
+        },
+        "summary": "Back-calculate head, efficiencies and powers from measured suction and discharge states by path method, and fit a turbo_machine map to the points.",
+        "tags": [
+          "equipment"
+        ],
+        "x-graphsolve-credits": {
+          "base_credits": 1,
+          "free_ms": 250,
+          "ms_per_credit": 250
+        }
+      }
+    },
     "/v1/tools/analyze_material_balance": {
       "post": {
         "description": "Straight-line material-balance diagnostics: gas p/Z → OGIP, or Havlena-Odeh F-vs-Et → STOIIP/GIIP, with R² and drive-support intercept.",
@@ -2927,6 +4948,27 @@
           "content": {
             "application/json": {
               "examples": {
+                "20 mm choke on a live-oil composition": {
+                  "value": {
+                    "choke_diameter": 0.02,
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "propane",
+                        "n-decane"
+                      ],
+                      "mass_rate": 4.0,
+                      "mole_fractions": [
+                        0.35,
+                        0.15,
+                        0.5
+                      ]
+                    },
+                    "discharge_coefficient": 0.75,
+                    "inlet_pressure": 10.0,
+                    "inlet_temperature": 320.0
+                  }
+                },
                 "25 mm choke": {
                   "value": {
                     "choke_diameter": 0.025,
@@ -2945,6 +4987,17 @@
                     "description": "Choke diameter in meters",
                     "format": "double",
                     "type": "number"
+                  },
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream in place of the black-oil rates and properties:\ncomponents, mole fractions, a cubic equation of state and `mass_rate`\n(kg/s). The choke is then the compositional choke edge's: the\nhomogeneous orifice, or Sachdeva's model for a two-phase stream, with\nno pressure recovery, so `pipe_diameter_ratio` and `perry_multiplier`\ndo not apply."
                   },
                   "discharge_coefficient": {
                     "description": "Choke discharge coefficient Cd, in (0, 1] (default: 0.68441971). The\nmass rate at a given pressure ratio is proportional to Cd.",
@@ -2971,6 +5024,7 @@
                     ]
                   },
                   "gas_rate": {
+                    "default": 0.0,
                     "description": "Free gas rate in Sm3/day at standard conditions. The oil carries\noil_rate × dissolved_gas_ratio in solution on top of it, so subtract\nthat from a total produced gas rate.",
                     "format": "double",
                     "type": "number"
@@ -2994,6 +5048,7 @@
                     ]
                   },
                   "oil_rate": {
+                    "default": 0.0,
                     "description": "Oil rate in Sm3/day",
                     "format": "double",
                     "type": "number"
@@ -3026,6 +5081,7 @@
                     "description": "Slip model (default: hydro)"
                   },
                   "water_rate": {
+                    "default": 0.0,
                     "description": "Water rate in Sm3/day",
                     "format": "double",
                     "type": "number"
@@ -3042,10 +5098,7 @@
                 "required": [
                   "inlet_pressure",
                   "inlet_temperature",
-                  "choke_diameter",
-                  "gas_rate",
-                  "oil_rate",
-                  "water_rate"
+                  "choke_diameter"
                 ],
                 "title": "ChokeParams",
                 "type": "object"
@@ -3122,8 +5175,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -3335,6 +5388,189 @@
         }
       }
     },
+    "/v1/tools/calculate_compression_train": {
+      "post": {
+        "description": "Compression train on a composition: per stage a turbo machine, an intercooler on the EOS enthalpy and a scrubber that removes the condensed liquid; stage and train power, duty, liquid and compositions.",
+        "operationId": "calculate_compression_train",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "three stages on a gas condensate, intercooled to 320 K and scrubbed": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "propane",
+                        "n-butane",
+                        "n-hexane",
+                        "n-decane"
+                      ],
+                      "mass_rate": 5.0,
+                      "mole_fractions": [
+                        0.8,
+                        0.08,
+                        0.05,
+                        0.03,
+                        0.025,
+                        0.015
+                      ]
+                    },
+                    "inlet_pressure": 2.0,
+                    "inlet_temperature": 360.0,
+                    "stages": [
+                      {
+                        "cooler": {
+                          "pressure_drop_mpa": 0.03,
+                          "target_temperature_k": 320.0
+                        },
+                        "turbo_machine": {
+                          "compressor_pressure_ratio": 2.2,
+                          "kind": "centrifugal_simple",
+                          "polytropic_efficiency": 0.78
+                        }
+                      },
+                      {
+                        "cooler": {
+                          "pressure_drop_mpa": 0.03,
+                          "target_temperature_k": 320.0
+                        },
+                        "turbo_machine": {
+                          "compressor_pressure_ratio": 2.2,
+                          "kind": "centrifugal_simple",
+                          "method": "schultz",
+                          "polytropic_efficiency": 0.78
+                        }
+                      },
+                      {
+                        "cooler": {
+                          "pressure_drop_mpa": 0.05,
+                          "target_temperature_k": 320.0
+                        },
+                        "knockout": false,
+                        "turbo_machine": {
+                          "compressor_pressure_ratio": 2.0,
+                          "kind": "centrifugal_simple",
+                          "polytropic_efficiency": 0.76
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "Input for a compression train on a composition. Each stage is a turbo\nmachine (a network compressor edge's `turbo_machine` block), an optional\ncooler and an optional scrubber; the train closes on\n`composition.mass_rate`, with every machine at its own definition.",
+                "properties": {
+                  "composition": {
+                    "$ref": "#/components/schemas/CompositionInputParams",
+                    "description": "The suction gas: components, mole fractions, cubic equation of state and\n`mass_rate` (kg/s, required)."
+                  },
+                  "inlet_pressure": {
+                    "description": "Train suction pressure in MPa",
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "inlet_temperature": {
+                    "description": "Train suction temperature in Kelvin",
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "stages": {
+                    "description": "The stages in flow order.",
+                    "items": {
+                      "$ref": "#/components/schemas/TrainStage"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "inlet_pressure",
+                  "inlet_temperature",
+                  "stages",
+                  "composition"
+                ],
+                "title": "CompressionTrainParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The tool ran. `status` is `success`, or `error` with `failure_kind: computation_failed` when the calculation itself produced no answer — which is a real result and IS charged."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Invalid input. The payload was malformed or semantically wrong; nothing was computed and no credits were charged. `failure_kind` is `invalid_input`."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired access token."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The access token lacks the scope this tool needs: `engine:read` for free lookups, `engine:solve` for anything that runs a calculation."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Internal error. Never charged."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The dispatch layer failed before or during the call. Never charged; safe to retry."
+          }
+        },
+        "summary": "Compression train on a composition: per stage a turbo machine, an intercooler on the EOS enthalpy and a scrubber that removes the condensed liquid; stage and train power, duty, liquid and compositions.",
+        "tags": [
+          "equipment"
+        ],
+        "x-graphsolve-credits": {
+          "base_credits": 1,
+          "free_ms": 250,
+          "ms_per_credit": 250
+        }
+      }
+    },
     "/v1/tools/calculate_compressor": {
       "post": {
         "description": "Single-stage centrifugal compressor: outlet P/T and power from inlet P/T, pressure ratio, and polytropic efficiency.",
@@ -3343,6 +5579,32 @@
           "content": {
             "application/json": {
               "examples": {
+                "Schultz on a natural-gas composition": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "propane",
+                        "n-butane",
+                        "carbon dioxide"
+                      ],
+                      "mass_rate": 8.0,
+                      "mole_fractions": [
+                        0.85,
+                        0.08,
+                        0.04,
+                        0.02,
+                        0.01
+                      ]
+                    },
+                    "inlet_pressure": 5.0,
+                    "inlet_temperature": 310.0,
+                    "isentropic_efficiency": 0.75,
+                    "method": "schultz",
+                    "pressure_ratio": 2.0
+                  }
+                },
                 "two-to-one boost": {
                   "value": {
                     "fluid": {
@@ -3357,11 +5619,29 @@
               },
               "schema": {
                 "additionalProperties": false,
-                "description": "Input for the single-point centrifugal compressor. The efficiency is\npolytropic and the path method is Schultz; the gas is a dry gas of\n`fluid.gas_mw` (no CO2, N2, H2S or condensate).",
+                "description": "Input for the single-point centrifugal compressor. The efficiency is\npolytropic unless `isentropic_efficiency` is given, and the path method\ndefaults to Huntington 3-point. The gas is a dry GERG-2008 gas of\n`fluid.gas_mw`, or a `composition` on a cubic equation of state.",
                 "properties": {
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream in place of `fluid`: components, mole fractions,\ncubic equation of state and `mass_rate` (kg/s), which sets the flow."
+                  },
                   "fluid": {
-                    "$ref": "#/components/schemas/FluidConfigInputParams",
-                    "description": "Fluid configuration. `gas_rate` sets the mass flow; only `gas_mw`\ndescribes the gas."
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/FluidConfigInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw`\nthe dry GERG-2008 gas. Give this or `composition`."
                   },
                   "inlet_pressure": {
                     "description": "Inlet pressure in MPa",
@@ -3373,11 +5653,26 @@
                     "format": "double",
                     "type": "number"
                   },
+                  "isentropic_efficiency": {
+                    "description": "Isentropic efficiency (0–1), in place of `polytropic_efficiency`.",
+                    "format": "double",
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
                   "mechanical_efficiency": {
                     "description": "Mechanical efficiency (0–1, default: 0.95)",
                     "format": "double",
                     "type": [
                       "number",
+                      "null"
+                    ]
+                  },
+                  "method": {
+                    "description": "Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only),\nsandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point,\nreference_2017, reference_1985, hundseid_small_stage, improved_hundseid,\nsandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann.",
+                    "type": [
+                      "string",
                       "null"
                     ]
                   },
@@ -3398,8 +5693,7 @@
                 "required": [
                   "inlet_pressure",
                   "inlet_temperature",
-                  "pressure_ratio",
-                  "fluid"
+                  "pressure_ratio"
                 ],
                 "title": "CompressorParams",
                 "type": "object"
@@ -3476,8 +5770,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -4328,6 +6622,28 @@
           "content": {
             "application/json": {
               "examples": {
+                "condensing cooler on a gas condensate": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "n-decane"
+                      ],
+                      "mass_rate": 5.0,
+                      "mole_fractions": [
+                        0.85,
+                        0.1,
+                        0.05
+                      ]
+                    },
+                    "inlet_pressure": 5.0,
+                    "inlet_temperature": 500.0,
+                    "mode": "fixed_outlet_temperature",
+                    "outlet_temperature": 330.0,
+                    "pressure_drop": 0.05
+                  }
+                },
                 "cooler to a 5 K approach": {
                   "value": {
                     "approach_temperature": 5.0,
@@ -4370,9 +6686,27 @@
                       "null"
                     ]
                   },
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream in place of `fluid`: components, mole fractions and\na cubic equation of state, with `mass_rate` (kg/s). The energy\nbalance is on the EOS enthalpy, so condensation and boiling count."
+                  },
                   "fluid": {
-                    "$ref": "#/components/schemas/FluidConfigInputParams",
-                    "description": "Fluid configuration"
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/FluidConfigInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Fluid configuration\nGive this or `composition`."
                   },
                   "heat_duty": {
                     "description": "Heat duty in W for fixed_duty (positive heats, negative cools)",
@@ -4440,8 +6774,7 @@
                 "required": [
                   "inlet_pressure",
                   "inlet_temperature",
-                  "mode",
-                  "fluid"
+                  "mode"
                 ],
                 "title": "HeaterCoolerParams",
                 "type": "object"
@@ -4518,8 +6851,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -4678,14 +7011,51 @@
                     "inlet_temperature": 350.0,
                     "outlet_pressure": 5.0
                   }
+                },
+                "gas condensate 10 -> 5 MPa": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "n-decane"
+                      ],
+                      "mole_fractions": [
+                        0.85,
+                        0.1,
+                        0.05
+                      ]
+                    },
+                    "inlet_pressure": 10.0,
+                    "inlet_temperature": 350.0,
+                    "outlet_pressure": 5.0
+                  }
                 }
               },
               "schema": {
                 "additionalProperties": false,
                 "properties": {
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream in place of `fluid`: components, mole fractions and\na cubic equation of state. The outlet temperature comes from an EOS\nPH flash; `mass_rate` is not used."
+                  },
                   "fluid": {
-                    "$ref": "#/components/schemas/FluidConfigInputParams",
-                    "description": "Fluid configuration"
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/FluidConfigInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Fluid configuration\nGive this or `composition`."
                   },
                   "inlet_pressure": {
                     "description": "Inlet pressure in MPa",
@@ -4706,8 +7076,7 @@
                 "required": [
                   "inlet_pressure",
                   "inlet_temperature",
-                  "outlet_pressure",
-                  "fluid"
+                  "outlet_pressure"
                 ],
                 "title": "IsenthalpicTemperatureParams",
                 "type": "object"
@@ -4784,8 +7153,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -4807,15 +7176,52 @@
                     "inlet_temperature": 350.0,
                     "pressure_drop": 3.0
                   }
+                },
+                "3 MPa drop on a gas condensate": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "n-decane"
+                      ],
+                      "mole_fractions": [
+                        0.85,
+                        0.1,
+                        0.05
+                      ]
+                    },
+                    "inlet_pressure": 10.0,
+                    "inlet_temperature": 350.0,
+                    "pressure_drop": 3.0
+                  }
                 }
               },
               "schema": {
                 "additionalProperties": false,
                 "description": "Input for the JT valve tool.",
                 "properties": {
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream in place of `fluid`: components, mole fractions and\na cubic equation of state. The outlet temperature comes from an EOS\nPH flash; `mass_rate` is not used."
+                  },
                   "fluid": {
-                    "$ref": "#/components/schemas/FluidConfigInputParams",
-                    "description": "Fluid configuration"
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/FluidConfigInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Fluid configuration\nGive this or `composition`."
                   },
                   "inlet_pressure": {
                     "description": "Inlet pressure in MPa",
@@ -4836,8 +7242,7 @@
                 "required": [
                   "inlet_pressure",
                   "inlet_temperature",
-                  "pressure_drop",
-                  "fluid"
+                  "pressure_drop"
                 ],
                 "title": "JtValveParams",
                 "type": "object"
@@ -4914,8 +7319,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -5215,6 +7620,43 @@
           "content": {
             "application/json": {
               "examples": {
+                "three stages on a composition": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "propane",
+                        "n-butane",
+                        "carbon dioxide"
+                      ],
+                      "mass_rate": 6.0,
+                      "mole_fractions": [
+                        0.85,
+                        0.08,
+                        0.04,
+                        0.02,
+                        0.01
+                      ]
+                    },
+                    "inlet_pressure": 2.0,
+                    "inlet_temperature": 310.0,
+                    "intercool_pressure_drop": 0.05,
+                    "intercool_temperature": 313.0,
+                    "stages": [
+                      {
+                        "pressure_ratio": 1.8
+                      },
+                      {
+                        "pressure_ratio": 1.8
+                      },
+                      {
+                        "method": "schultz",
+                        "pressure_ratio": 1.8
+                      }
+                    ]
+                  }
+                },
                 "two intercooled stages": {
                   "value": {
                     "fluid": {
@@ -5237,11 +7679,29 @@
               },
               "schema": {
                 "additionalProperties": false,
-                "description": "Input for the multi-stage centrifugal compressor tool. Stage efficiencies\nare polytropic and the path method is Schultz; the gas is a dry gas of\n`fluid.gas_mw` (no CO2, N2, H2S or condensate).",
+                "description": "Input for the multi-stage centrifugal compressor tool. Stage efficiencies\nare polytropic and the path method defaults to Huntington 3-point. The gas\nis a dry GERG-2008 gas of `fluid.gas_mw`, or a `composition` on a cubic\nequation of state. Every inter-stage cooler gets the same target; for\nper-cooler targets, mapped stages or anti-surge recycle use\n`calculate_turbo_machine` with a `centrifugal_multistage` block.",
                 "properties": {
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream in place of `fluid`: components, mole fractions,\ncubic equation of state and `mass_rate` (kg/s), which sets the flow."
+                  },
                   "fluid": {
-                    "$ref": "#/components/schemas/FluidConfigInputParams",
-                    "description": "Fluid rates and PVT configuration (gas rate drives the mass flow)."
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/FluidConfigInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw`\nthe dry GERG-2008 gas. Give this or `composition`."
                   },
                   "inlet_pressure": {
                     "description": "Inlet pressure in MPa.",
@@ -5277,6 +7737,13 @@
                       "null"
                     ]
                   },
+                  "method": {
+                    "description": "Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only),\nsandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point,\nreference_2017, reference_1985, hundseid_small_stage, improved_hundseid,\nsandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "stages": {
                     "description": "Compression stages, in order.",
                     "items": {
@@ -5288,8 +7755,7 @@
                 "required": [
                   "inlet_pressure",
                   "inlet_temperature",
-                  "stages",
-                  "fluid"
+                  "stages"
                 ],
                 "title": "MultistageCompressorParams",
                 "type": "object"
@@ -5366,8 +7832,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -6227,6 +8693,41 @@
                     "npsh_required": 3.0
                   }
                 },
+                "head curve on a live-oil composition": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "propane",
+                        "n-decane"
+                      ],
+                      "mass_rate": 20.0,
+                      "mole_fractions": [
+                        0.15,
+                        0.15,
+                        0.7
+                      ]
+                    },
+                    "efficiency": 0.7,
+                    "head_curve": [
+                      [
+                        0.0,
+                        160.0
+                      ],
+                      [
+                        0.02,
+                        150.0
+                      ],
+                      [
+                        0.04,
+                        120.0
+                      ]
+                    ],
+                    "inlet_pressure": 12.0,
+                    "inlet_temperature": 330.0,
+                    "npsh_required": 3.0
+                  }
+                },
                 "single head curve": {
                   "value": {
                     "efficiency": 0.7,
@@ -6267,6 +8768,17 @@
                     ],
                     "description": "Multistage centrifugal pump on stage curves, with an optional ESP drive\ntrain. Replaces `head_curve`."
                   },
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream in place of `fluid`: components, mole fractions and\na cubic equation of state, with `mass_rate` (kg/s). Each march step\nflashes the stream at its own pressure and temperature."
+                  },
                   "efficiency": {
                     "description": "Hydraulic efficiency (0-1) of a head-curve pump, and of any section\nwithout a stage-curve efficiency. Needed only then.",
                     "format": "double",
@@ -6276,8 +8788,15 @@
                     ]
                   },
                   "fluid": {
-                    "$ref": "#/components/schemas/FluidConfigInputParams",
-                    "description": "The pumped stream: standard-condition rates and black-oil PVT. It is\nevaluated at the inlet of every march step, so free gas compresses and\nredissolves along the pump."
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/FluidConfigInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The pumped stream: standard-condition rates and black-oil PVT. It is\nevaluated at the inlet of every march step, so free gas compresses and\nredissolves along the pump.\nGive this or `composition`."
                   },
                   "head_curve": {
                     "description": "Single head curve as [flow m3/s in situ, head m] pairs, flow strictly\nincreasing. Needed unless `centrifugal` is given, which replaces it.",
@@ -6337,8 +8856,7 @@
                 },
                 "required": [
                   "inlet_pressure",
-                  "inlet_temperature",
-                  "fluid"
+                  "inlet_temperature"
                 ],
                 "title": "PumpParams",
                 "type": "object"
@@ -6415,8 +8933,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -6861,11 +9379,37 @@
                     "speed_rpm": 900.0,
                     "swept_volume_per_rev_m3": 0.02
                   }
+                },
+                "two-to-one boost on a composition": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "propane",
+                        "n-butane",
+                        "carbon dioxide"
+                      ],
+                      "mole_fractions": [
+                        0.85,
+                        0.08,
+                        0.04,
+                        0.02,
+                        0.01
+                      ]
+                    },
+                    "discharge_pressure": 4.0,
+                    "inlet_pressure": 2.0,
+                    "inlet_temperature": 310.0,
+                    "method": "improved_hundseid",
+                    "speed_rpm": 900.0,
+                    "swept_volume_per_rev_m3": 0.02
+                  }
                 }
               },
               "schema": {
                 "additionalProperties": false,
-                "description": "Input for the reciprocating (positive-displacement) compressor tool. Mass\nflow is not supplied: it is set by the machine displacement (swept volume per\nrevolution x speed x volumetric efficiency). The path method is Schultz. The\ndefaults are this tool's own: a network `reciprocating_simple` machine\ndefaults to polytropic efficiency 0.78, max_pressure_ratio 12 and\nmin_pressure_ratio 1.0001, and needs its clearance_ratio.",
+                "description": "Input for the reciprocating (positive-displacement) compressor tool. Mass\nflow is not supplied: it is set by the machine displacement (swept volume per\nrevolution x speed x volumetric efficiency). The path method defaults to\nHuntington 3-point. The\ndefaults are this tool's own: a network `reciprocating_simple` machine\ndefaults to polytropic efficiency 0.78, max_pressure_ratio 12 and\nmin_pressure_ratio 1.0001, and needs its clearance_ratio.",
                 "properties": {
                   "clearance_fraction": {
                     "description": "Clearance volume as a fraction of swept volume (default: 0.12).",
@@ -6882,6 +9426,17 @@
                       "number",
                       "null"
                     ]
+                  },
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional gas in place of the GERG gas (`gas_molecular_weight` and\nimpurity fractions): components, mole fractions and cubic equation of\nstate. `mass_rate` is not used; the machine sets the flow."
                   },
                   "discharge_pressure": {
                     "description": "Discharge (flange) pressure in MPa. Must be greater than inlet_pressure.",
@@ -6927,6 +9482,13 @@
                     "format": "double",
                     "type": [
                       "number",
+                      "null"
+                    ]
+                  },
+                  "method": {
+                    "description": "Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only),\nsandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point,\nreference_2017, reference_1985, hundseid_small_stage, improved_hundseid,\nsandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann.",
+                    "type": [
+                      "string",
                       "null"
                     ]
                   },
@@ -7047,8 +9609,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -7436,6 +9998,32 @@
           "content": {
             "application/json": {
               "examples": {
+                "oil-flooded screw on a composition": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "propane",
+                        "n-butane",
+                        "carbon dioxide"
+                      ],
+                      "mole_fractions": [
+                        0.85,
+                        0.08,
+                        0.04,
+                        0.02,
+                        0.01
+                      ]
+                    },
+                    "discharge_pressure": 3.0,
+                    "displacement_per_rev_m3": 0.01,
+                    "inlet_pressure": 1.0,
+                    "inlet_temperature": 305.0,
+                    "shaft_speed_rev_s": 50.0,
+                    "subtype": "oil_flooded"
+                  }
+                },
                 "three-to-one boost": {
                   "value": {
                     "discharge_pressure": 3.0,
@@ -7449,7 +10037,7 @@
               },
               "schema": {
                 "additionalProperties": false,
-                "description": "Input for the screw (positive-displacement) compressor tool. The delivered\nmass flow is volumetric_efficiency × suction density ×\ndisplacement_per_rev_m3 × shaft_speed_rev_s. The path method is Schultz.",
+                "description": "Input for the screw (positive-displacement) compressor tool. The delivered\nmass flow is volumetric_efficiency × suction density ×\ndisplacement_per_rev_m3 × shaft_speed_rev_s. The path method defaults to\nHuntington 3-point.",
                 "properties": {
                   "co2_fraction": {
                     "description": "CO2 mole fraction (default: 0).",
@@ -7458,6 +10046,17 @@
                       "number",
                       "null"
                     ]
+                  },
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional gas in place of the GERG gas (`gas_molecular_weight` and\nimpurity fractions): components, mole fractions and cubic equation of\nstate. `mass_rate` is not used; the machine sets the flow."
                   },
                   "discharge_pressure": {
                     "description": "Discharge pressure in MPa (must exceed inlet_pressure).",
@@ -7500,6 +10099,13 @@
                     "format": "double",
                     "type": [
                       "number",
+                      "null"
+                    ]
+                  },
+                  "method": {
+                    "description": "Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only),\nsandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point,\nreference_2017, reference_1985, hundseid_small_stage, improved_hundseid,\nsandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann.",
+                    "type": [
+                      "string",
                       "null"
                     ]
                   },
@@ -7622,8 +10228,8 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },
@@ -7645,15 +10251,58 @@
                     "inlet_temperature": 400.0,
                     "pressure_ratio": 0.5
                   }
+                },
+                "expander on a natural-gas composition": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "propane",
+                        "n-butane",
+                        "carbon dioxide"
+                      ],
+                      "mass_rate": 8.0,
+                      "mole_fractions": [
+                        0.85,
+                        0.08,
+                        0.04,
+                        0.02,
+                        0.01
+                      ]
+                    },
+                    "inlet_pressure": 10.0,
+                    "inlet_temperature": 330.0,
+                    "method": "reference_2017",
+                    "pressure_ratio": 0.5
+                  }
                 }
               },
               "schema": {
                 "additionalProperties": false,
-                "description": "Input for the single-point centrifugal turbine/expander. The efficiency is\npolytropic and the path method is Huntington 3-point; the gas is a dry gas\nof `fluid.gas_mw` (no CO2, N2, H2S or condensate).",
+                "description": "Input for the single-point centrifugal turbine/expander. The efficiency is\npolytropic unless `isentropic_efficiency` is given, and the path method\ndefaults to Huntington 3-point. The gas is a dry GERG-2008 gas of\n`fluid.gas_mw`, or a `composition` on a cubic equation of state.",
                 "properties": {
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream in place of `fluid`: components, mole fractions,\ncubic equation of state and `mass_rate` (kg/s), which sets the flow."
+                  },
                   "fluid": {
-                    "$ref": "#/components/schemas/FluidConfigInputParams",
-                    "description": "Fluid configuration. `gas_rate` sets the mass flow; only `gas_mw`\ndescribes the gas."
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/FluidConfigInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw`\nthe dry GERG-2008 gas. Give this or `composition`."
                   },
                   "inlet_pressure": {
                     "description": "Inlet pressure in MPa",
@@ -7665,11 +10314,26 @@
                     "format": "double",
                     "type": "number"
                   },
+                  "isentropic_efficiency": {
+                    "description": "Isentropic efficiency (0–1), in place of `polytropic_efficiency`.",
+                    "format": "double",
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
                   "mechanical_efficiency": {
                     "description": "Mechanical efficiency (0–1, default: 0.95)",
                     "format": "double",
                     "type": [
                       "number",
+                      "null"
+                    ]
+                  },
+                  "method": {
+                    "description": "Path method (default huntington_3point): ideal_gas_exact, schultz (compressor only),\nsandberg_colby_endpoint, huntington_2point, huntington_3point, huntington_4point,\nreference_2017, reference_1985, hundseid_small_stage, improved_hundseid,\nsandberg_colby_multistep, taher_evans_cubic, sandberg_colby_huntington_weyermann.",
+                    "type": [
+                      "string",
                       "null"
                     ]
                   },
@@ -7690,8 +10354,7 @@
                 "required": [
                   "inlet_pressure",
                   "inlet_temperature",
-                  "pressure_ratio",
-                  "fluid"
+                  "pressure_ratio"
                 ],
                 "title": "TurbineParams",
                 "type": "object"
@@ -7768,8 +10431,287 @@
         ],
         "x-graphsolve-credits": {
           "base_credits": 1,
-          "free_ms": 1000,
-          "ms_per_credit": 0
+          "free_ms": 250,
+          "ms_per_credit": 250
+        }
+      }
+    },
+    "/v1/tools/calculate_turbo_machine": {
+      "post": {
+        "description": "Any network turbo machine (centrifugal simple/mapped/map/multistage, axial, screw, reciprocating) at one operating point, on a GERG gas or an EOS composition, with a chosen path method.",
+        "operationId": "calculate_turbo_machine",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "single-speed mapped compressor on a GERG gas": {
+                  "value": {
+                    "fluid": {
+                      "gas_mw": 18.5,
+                      "gas_rate": 1000000
+                    },
+                    "inlet_pressure": 5.0,
+                    "inlet_temperature": 300.0,
+                    "turbo_machine": {
+                      "efficiency_curve": {
+                        "x": [
+                          0.1,
+                          0.2,
+                          0.3
+                        ],
+                        "y": [
+                          0.72,
+                          0.79,
+                          0.75
+                        ]
+                      },
+                      "head_curve": {
+                        "x": [
+                          0.1,
+                          0.2,
+                          0.3
+                        ],
+                        "y": [
+                          90000.0,
+                          80000.0,
+                          62000.0
+                        ]
+                      },
+                      "kind": "centrifugal_mapped"
+                    }
+                  }
+                },
+                "two-speed map on a lean-gas composition": {
+                  "value": {
+                    "composition": {
+                      "component_names": [
+                        "methane",
+                        "ethane",
+                        "propane"
+                      ],
+                      "mass_rate": 10.0,
+                      "mole_fractions": [
+                        0.9,
+                        0.07,
+                        0.03
+                      ]
+                    },
+                    "inlet_pressure": 4.0,
+                    "inlet_temperature": 300.0,
+                    "turbo_machine": {
+                      "kind": "centrifugal_map",
+                      "method": "schultz",
+                      "shaft_speed": 1100.0,
+                      "speed_lines": [
+                        {
+                          "efficiency_curve": {
+                            "x": [
+                              0.2,
+                              0.35,
+                              0.5
+                            ],
+                            "y": [
+                              0.74,
+                              0.8,
+                              0.76
+                            ]
+                          },
+                          "head_curve": {
+                            "x": [
+                              0.2,
+                              0.35,
+                              0.5
+                            ],
+                            "y": [
+                              85000.0,
+                              75000.0,
+                              58000.0
+                            ]
+                          },
+                          "shaft_speed": 1000.0
+                        },
+                        {
+                          "efficiency_curve": {
+                            "x": [
+                              0.24,
+                              0.42,
+                              0.6
+                            ],
+                            "y": [
+                              0.74,
+                              0.8,
+                              0.76
+                            ]
+                          },
+                          "head_curve": {
+                            "x": [
+                              0.24,
+                              0.42,
+                              0.6
+                            ],
+                            "y": [
+                              122000.0,
+                              108000.0,
+                              83000.0
+                            ]
+                          },
+                          "shaft_speed": 1200.0
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "schema": {
+                "additionalProperties": false,
+                "description": "Input for any turbo machine a network compressor or turbine edge accepts,\nsolved at one operating point. The machine is the edge's `turbo_machine`\nblock. The fluid is either `fluid` (a GERG-2008 gas of `fluid.gas_mw`,\nmass flow from `fluid.gas_rate`) or `composition` (a cubic equation of\nstate, mass flow from `composition.mass_rate`). Dynamic machines\n(centrifugal, axial) and reciprocating machines take a flow; screw and\nreciprocating machines take a `discharge_pressure` instead and return the\ncapacity.",
+                "properties": {
+                  "composition": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/CompositionInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compositional stream: components, mole fractions, equation of state and\n`mass_rate` (kg/s). Give this or `fluid`."
+                  },
+                  "discharge_pressure": {
+                    "description": "Discharge pressure in MPa, for a positive-displacement machine solved\nfor its capacity. Give this or a flow, not both.",
+                    "format": "double",
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "fluid": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/FluidConfigInputParams"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Black-oil fluid: `gas_rate` (Sm3/day) sets the mass flow and `gas_mw`\nthe GERG-2008 gas. Give this or `composition`."
+                  },
+                  "inlet_pressure": {
+                    "description": "Inlet (suction) pressure in MPa",
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "inlet_temperature": {
+                    "description": "Inlet (suction) temperature in Kelvin",
+                    "format": "double",
+                    "type": "number"
+                  },
+                  "mechanical_efficiency": {
+                    "description": "Mechanical efficiency (0–1, default 0.95), for machines whose result\ncarries no shaft power of its own.",
+                    "format": "double",
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "mode": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/TurboModeName"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Compressor (default) or expander."
+                  },
+                  "turbo_machine": {
+                    "$ref": "#/components/schemas/TurboMachineConfig",
+                    "description": "The machine, tagged by `kind`, exactly as on a network compressor or\nturbine edge. Every kind takes an optional path `method` (default\nhuntington_3point)."
+                  }
+                },
+                "required": [
+                  "inlet_pressure",
+                  "inlet_temperature",
+                  "turbo_machine"
+                ],
+                "title": "TurboMachineParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The tool ran. `status` is `success`, or `error` with `failure_kind: computation_failed` when the calculation itself produced no answer — which is a real result and IS charged."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Invalid input. The payload was malformed or semantically wrong; nothing was computed and no credits were charged. `failure_kind` is `invalid_input`."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired access token."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The access token lacks the scope this tool needs: `engine:read` for free lookups, `engine:solve` for anything that runs a calculation."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "Internal error. Never charged."
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolResponse"
+                }
+              }
+            },
+            "description": "The dispatch layer failed before or during the call. Never charged; safe to retry."
+          }
+        },
+        "summary": "Any network turbo machine (centrifugal simple/mapped/map/multistage, axial, screw, reciprocating) at one operating point, on a GERG gas or an EOS composition, with a chosen path method.",
+        "tags": [
+          "equipment"
+        ],
+        "x-graphsolve-credits": {
+          "base_credits": 1,
+          "free_ms": 250,
+          "ms_per_credit": 250
         }
       }
     },

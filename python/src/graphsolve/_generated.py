@@ -4,8 +4,8 @@ GENERATED FROM spec/graphsolve-v1.json — DO NOT EDIT BY HAND.
 Run `python emit/emit_python.py` after a spec change; CI fails if this
 file and the spec disagree.
 
-Engine API version: 1.0.40
-Tools: 98
+Engine API version: 1.0.42
+Tools: 101
 """
 
 from __future__ import annotations
@@ -128,6 +128,38 @@ class GeneratedMethods:
             ),
         )
 
+    def analyse_turbo_performance(
+        self,
+        *,
+        points: list[dict[str, Any]],
+        co2_fraction: float | None = None,
+        composition: dict[str, Any] | None = None,
+        gas_molecular_weight: float | None = None,
+        h2s_fraction: float | None = None,
+        methods: list[str] | None = None,
+        mode: Literal["compressor", "expander"] | None = None,
+        n2_fraction: float | None = None,
+    ) -> dict[str, Any]:
+        """Back-calculate head, efficiencies and powers from measured suction and
+        discharge states by path method, and fit a turbo_machine map to the
+        points.
+
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+        """
+        return self.call(
+            "analyse_turbo_performance",
+            _present(
+                points=points,
+                co2_fraction=co2_fraction,
+                composition=composition,
+                gas_molecular_weight=gas_molecular_weight,
+                h2s_fraction=h2s_fraction,
+                methods=methods,
+                mode=mode,
+                n2_fraction=n2_fraction,
+            ),
+        )
+
     def analyze_material_balance(
         self,
         *,
@@ -166,41 +198,43 @@ class GeneratedMethods:
         self,
         *,
         choke_diameter: float,
-        gas_rate: float,
         inlet_pressure: float,
         inlet_temperature: float,
-        oil_rate: float,
-        water_rate: float,
+        composition: dict[str, Any] | None = None,
         discharge_coefficient: float | None = None,
         dissolved_gas_ratio: float | None = None,
         gas_mw: float | None = None,
+        gas_rate: float | None = None,
         oil_density: float | None = None,
+        oil_rate: float | None = None,
         perry_multiplier: float | None = None,
         pipe_diameter_ratio: float | None = None,
         slip_model: Literal["no_slip", "gromles", "hydro", "constant_slip", "fauske", "moddy", "simpson", "thom", "baroczy", "lockhart_martenelli"] | None = None,
+        water_rate: float | None = None,
         water_salinity: float | None = None,
     ) -> dict[str, Any]:
         """Pressure drop across a choke of known diameter at given rates (Sachdeva
         multiphase model, critical/subcritical).
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_choke_pressure_drop",
             _present(
                 choke_diameter=choke_diameter,
-                gas_rate=gas_rate,
                 inlet_pressure=inlet_pressure,
                 inlet_temperature=inlet_temperature,
-                oil_rate=oil_rate,
-                water_rate=water_rate,
+                composition=composition,
                 discharge_coefficient=discharge_coefficient,
                 dissolved_gas_ratio=dissolved_gas_ratio,
                 gas_mw=gas_mw,
+                gas_rate=gas_rate,
                 oil_density=oil_density,
+                oil_rate=oil_rate,
                 perry_multiplier=perry_multiplier,
                 pipe_diameter_ratio=pipe_diameter_ratio,
                 slip_model=slip_model,
+                water_rate=water_rate,
                 water_salinity=water_salinity,
             ),
         )
@@ -248,29 +282,59 @@ class GeneratedMethods:
             ),
         )
 
+    def calculate_compression_train(
+        self,
+        *,
+        composition: dict[str, Any],
+        inlet_pressure: float,
+        inlet_temperature: float,
+        stages: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Compression train on a composition: per stage a turbo machine, an
+        intercooler on the EOS enthalpy and a scrubber that removes the condensed
+        liquid; stage and train power, duty, liquid and compositions.
+
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+        """
+        return self.call(
+            "calculate_compression_train",
+            _present(
+                composition=composition,
+                inlet_pressure=inlet_pressure,
+                inlet_temperature=inlet_temperature,
+                stages=stages,
+            ),
+        )
+
     def calculate_compressor(
         self,
         *,
-        fluid: dict[str, Any],
         inlet_pressure: float,
         inlet_temperature: float,
         pressure_ratio: float,
+        composition: dict[str, Any] | None = None,
+        fluid: dict[str, Any] | None = None,
+        isentropic_efficiency: float | None = None,
         mechanical_efficiency: float | None = None,
+        method: str | None = None,
         polytropic_efficiency: float | None = None,
     ) -> dict[str, Any]:
         """Single-stage centrifugal compressor: outlet P/T and power from inlet P/T,
         pressure ratio, and polytropic efficiency.
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_compressor",
             _present(
-                fluid=fluid,
                 inlet_pressure=inlet_pressure,
                 inlet_temperature=inlet_temperature,
                 pressure_ratio=pressure_ratio,
+                composition=composition,
+                fluid=fluid,
+                isentropic_efficiency=isentropic_efficiency,
                 mechanical_efficiency=mechanical_efficiency,
+                method=method,
                 polytropic_efficiency=polytropic_efficiency,
             ),
         )
@@ -423,11 +487,12 @@ class GeneratedMethods:
     def calculate_heater_cooler(
         self,
         *,
-        fluid: dict[str, Any],
         inlet_pressure: float,
         inlet_temperature: float,
         mode: Literal["fixed_duty", "fixed_outlet_temperature", "approach_temperature", "ua"],
         approach_temperature: float | None = None,
+        composition: dict[str, Any] | None = None,
+        fluid: dict[str, Any] | None = None,
         heat_duty: float | None = None,
         max_duty: float | None = None,
         outlet_temperature: float | None = None,
@@ -439,16 +504,17 @@ class GeneratedMethods:
         fixed_outlet_temperature, approach_temperature or ua mode; returns outlet
         P/T and duty.
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_heater_cooler",
             _present(
-                fluid=fluid,
                 inlet_pressure=inlet_pressure,
                 inlet_temperature=inlet_temperature,
                 mode=mode,
                 approach_temperature=approach_temperature,
+                composition=composition,
+                fluid=fluid,
                 heat_duty=heat_duty,
                 max_duty=max_duty,
                 outlet_temperature=outlet_temperature,
@@ -485,45 +551,49 @@ class GeneratedMethods:
     def calculate_isenthalpic_temperature(
         self,
         *,
-        fluid: dict[str, Any],
         inlet_pressure: float,
         inlet_temperature: float,
         outlet_pressure: float,
+        composition: dict[str, Any] | None = None,
+        fluid: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Outlet temperature after a constant-enthalpy (Joule-Thomson) expansion to
         a lower pressure.
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_isenthalpic_temperature",
             _present(
-                fluid=fluid,
                 inlet_pressure=inlet_pressure,
                 inlet_temperature=inlet_temperature,
                 outlet_pressure=outlet_pressure,
+                composition=composition,
+                fluid=fluid,
             ),
         )
 
     def calculate_jt_valve(
         self,
         *,
-        fluid: dict[str, Any],
         inlet_pressure: float,
         inlet_temperature: float,
         pressure_drop: float,
+        composition: dict[str, Any] | None = None,
+        fluid: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Joule-Thomson throttle valve: outlet T after an isenthalpic pressure drop.
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_jt_valve",
             _present(
-                fluid=fluid,
                 inlet_pressure=inlet_pressure,
                 inlet_temperature=inlet_temperature,
                 pressure_drop=pressure_drop,
+                composition=composition,
+                fluid=fluid,
             ),
         )
 
@@ -564,29 +634,33 @@ class GeneratedMethods:
     def calculate_multistage_compressor(
         self,
         *,
-        fluid: dict[str, Any],
         inlet_pressure: float,
         inlet_temperature: float,
         stages: list[dict[str, Any]],
+        composition: dict[str, Any] | None = None,
+        fluid: dict[str, Any] | None = None,
         intercool_pressure_drop: float | None = None,
         intercool_temperature: float | None = None,
         mechanical_efficiency: float | None = None,
+        method: str | None = None,
     ) -> dict[str, Any]:
         """Multi-stage centrifugal train with optional inter-stage cooling; per-stage
         pressure ratios and overall discharge P/T, cooler duty and shaft power.
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_multistage_compressor",
             _present(
-                fluid=fluid,
                 inlet_pressure=inlet_pressure,
                 inlet_temperature=inlet_temperature,
                 stages=stages,
+                composition=composition,
+                fluid=fluid,
                 intercool_pressure_drop=intercool_pressure_drop,
                 intercool_temperature=intercool_temperature,
                 mechanical_efficiency=mechanical_efficiency,
+                method=method,
             ),
         )
 
@@ -744,11 +818,12 @@ class GeneratedMethods:
     def calculate_pump(
         self,
         *,
-        fluid: dict[str, Any],
         inlet_pressure: float,
         inlet_temperature: float,
         centrifugal: dict[str, Any] | None = None,
+        composition: dict[str, Any] | None = None,
         efficiency: float | None = None,
+        fluid: dict[str, Any] | None = None,
         head_curve: list[list[float]] | None = None,
         mechanical_efficiency: float | None = None,
         minor_loss_coefficient: float | None = None,
@@ -759,16 +834,17 @@ class GeneratedMethods:
         discharge P/T, head, power, NPSH, per-section operating range and the ESP
         drive train.
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_pump",
             _present(
-                fluid=fluid,
                 inlet_pressure=inlet_pressure,
                 inlet_temperature=inlet_temperature,
                 centrifugal=centrifugal,
+                composition=composition,
                 efficiency=efficiency,
+                fluid=fluid,
                 head_curve=head_curve,
                 mechanical_efficiency=mechanical_efficiency,
                 minor_loss_coefficient=minor_loss_coefficient,
@@ -870,10 +946,12 @@ class GeneratedMethods:
         swept_volume_per_rev_m3: float,
         clearance_fraction: float | None = None,
         co2_fraction: float | None = None,
+        composition: dict[str, Any] | None = None,
         gas_molecular_weight: float | None = None,
         h2s_fraction: float | None = None,
         max_pressure_ratio: float | None = None,
         mechanical_efficiency: float | None = None,
+        method: str | None = None,
         min_pressure_ratio: float | None = None,
         n2_fraction: float | None = None,
         polytropic_efficiency: float | None = None,
@@ -881,7 +959,7 @@ class GeneratedMethods:
         """Reciprocating (positive-displacement) compressor. Mass flow is set by
         displacement x speed x volumetric efficiency, not supplied.
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_reciprocating_compressor",
@@ -893,10 +971,12 @@ class GeneratedMethods:
                 swept_volume_per_rev_m3=swept_volume_per_rev_m3,
                 clearance_fraction=clearance_fraction,
                 co2_fraction=co2_fraction,
+                composition=composition,
                 gas_molecular_weight=gas_molecular_weight,
                 h2s_fraction=h2s_fraction,
                 max_pressure_ratio=max_pressure_ratio,
                 mechanical_efficiency=mechanical_efficiency,
+                method=method,
                 min_pressure_ratio=min_pressure_ratio,
                 n2_fraction=n2_fraction,
                 polytropic_efficiency=polytropic_efficiency,
@@ -969,9 +1049,11 @@ class GeneratedMethods:
         inlet_temperature: float,
         shaft_speed_rev_s: float,
         co2_fraction: float | None = None,
+        composition: dict[str, Any] | None = None,
         gas_molecular_weight: float | None = None,
         h2s_fraction: float | None = None,
         mechanical_efficiency: float | None = None,
+        method: str | None = None,
         n2_fraction: float | None = None,
         polytropic_efficiency: float | None = None,
         subtype: str | None = None,
@@ -981,7 +1063,7 @@ class GeneratedMethods:
         mass flow = volumetric efficiency x suction density x displacement per
         revolution x shaft speed in rev/s.
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_screw_compressor",
@@ -992,9 +1074,11 @@ class GeneratedMethods:
                 inlet_temperature=inlet_temperature,
                 shaft_speed_rev_s=shaft_speed_rev_s,
                 co2_fraction=co2_fraction,
+                composition=composition,
                 gas_molecular_weight=gas_molecular_weight,
                 h2s_fraction=h2s_fraction,
                 mechanical_efficiency=mechanical_efficiency,
+                method=method,
                 n2_fraction=n2_fraction,
                 polytropic_efficiency=polytropic_efficiency,
                 subtype=subtype,
@@ -1005,27 +1089,65 @@ class GeneratedMethods:
     def calculate_turbine(
         self,
         *,
-        fluid: dict[str, Any],
         inlet_pressure: float,
         inlet_temperature: float,
         pressure_ratio: float,
+        composition: dict[str, Any] | None = None,
+        fluid: dict[str, Any] | None = None,
+        isentropic_efficiency: float | None = None,
         mechanical_efficiency: float | None = None,
+        method: str | None = None,
         polytropic_efficiency: float | None = None,
     ) -> dict[str, Any]:
         """Single-stage centrifugal turbine/expander: outlet P/T and power generated
         from inlet P/T and an expansion pressure ratio (0 < PR < 1).
 
-        Costs 1 credit.
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
         """
         return self.call(
             "calculate_turbine",
             _present(
-                fluid=fluid,
                 inlet_pressure=inlet_pressure,
                 inlet_temperature=inlet_temperature,
                 pressure_ratio=pressure_ratio,
+                composition=composition,
+                fluid=fluid,
+                isentropic_efficiency=isentropic_efficiency,
                 mechanical_efficiency=mechanical_efficiency,
+                method=method,
                 polytropic_efficiency=polytropic_efficiency,
+            ),
+        )
+
+    def calculate_turbo_machine(
+        self,
+        *,
+        inlet_pressure: float,
+        inlet_temperature: float,
+        turbo_machine: dict[str, Any],
+        composition: dict[str, Any] | None = None,
+        discharge_pressure: float | None = None,
+        fluid: dict[str, Any] | None = None,
+        mechanical_efficiency: float | None = None,
+        mode: Literal["compressor", "expander"] | None = None,
+    ) -> dict[str, Any]:
+        """Any network turbo machine (centrifugal simple/mapped/map/multistage,
+        axial, screw, reciprocating) at one operating point, on a GERG gas or an
+        EOS composition, with a chosen path method.
+
+        Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute.
+        """
+        return self.call(
+            "calculate_turbo_machine",
+            _present(
+                inlet_pressure=inlet_pressure,
+                inlet_temperature=inlet_temperature,
+                turbo_machine=turbo_machine,
+                composition=composition,
+                discharge_pressure=discharge_pressure,
+                fluid=fluid,
+                mechanical_efficiency=mechanical_efficiency,
+                mode=mode,
             ),
         )
 

@@ -75,6 +75,7 @@ nav:
       - Long-running jobs: guides/jobs.md
   - Examples:
       - A single oil well: examples/single-well.md
+      - Compressors and compositional equipment: examples/equipment.md
   - Reference:
       - Tools: reference/tools/
       - Python client: reference/python.md
