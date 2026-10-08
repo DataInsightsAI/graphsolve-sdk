@@ -54,7 +54,8 @@ Method and argument names are the API's own — `solve_network`, `network_json` 
 in every language, so the documentation and the code always agree.
 
 Releases are per-language and independent — tags look like `python-v1.2.0`,
-`ts-v1.2.0` and `rust-v1.2.0`.
+`ts-v1.2.0` and `rust-v1.2.0`. [`CHANGELOG.md`](CHANGELOG.md) lists what each
+release adds, changes or breaks.
 
 ## Versioning
 
