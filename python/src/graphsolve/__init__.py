@@ -37,4 +37,5 @@ __all__ = [
     "ToolNotPermitted",
 ]
 
-__version__ = "1.0.0"
+# Must match pyproject.toml; scripts/check_versions.py fails CI otherwise.
+__version__ = "1.0.42"
