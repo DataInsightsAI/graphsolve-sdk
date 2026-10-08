@@ -67,6 +67,14 @@ Tags are per-language, so the clients release independently:
 | `ts-v1.2.0` | `@graphsolve/sdk` on npm | `npm` |
 | `rust-v1.2.0` | `graphsolve` on crates.io | `crates-io` |
 
+Before tagging, move the `## Unreleased` entries in
+[`CHANGELOG.md`](CHANGELOG.md) under a new `## X.Y.Z — YYYY-MM-DD` heading.
+Write for users: name every new tool, and put anything that can break a
+working call under **Breaking**: a newly required argument, a removed tool, a
+type change in one client. Put changed prices under **Changed**. Mark a change
+that affects only one client with the language. The docs site includes the
+file as its Changelog page, and PyPI links to it.
+
 Each publish job **re-runs that language's tests and asserts the tag matches the
 committed version** before uploading, rather than assuming CI passed on the
 commit. A crates.io version cannot be unpublished at all.
@@ -114,7 +122,8 @@ down here: this repository is public and the engine's is not.
 That copies the spec in, regenerates all three clients and the tool reference
 pages, and prints the diff.
 Review it: a removed tool, a newly required argument or a changed price is a
-breaking change. Then bump the three client versions, run
+breaking change. Record what changed in `CHANGELOG.md` under `## Unreleased`.
+Then bump the three client versions, run
 `python scripts/check_versions.py` and each language's gate, and open a PR.
 
 This needs no credentials in either direction, but it does need
