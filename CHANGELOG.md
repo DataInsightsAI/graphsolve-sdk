@@ -20,6 +20,11 @@ Each release lists its changes under these headings:
 
 ## Unreleased
 
+### Fixed
+
+- **Python only:** `graphsolve.__version__` now reports the installed
+  version. It was stuck at `"1.0.0"`.
+
 ## 1.0.42 — 2026-10-08
 
 ### Added
