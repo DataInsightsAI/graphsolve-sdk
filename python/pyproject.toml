@@ -15,7 +15,7 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 # major.minor tracks the engine API this client speaks; patch is the client's own.
-version = "1.0.42"
+version = "1.0.49"
 dependencies = ["httpx>=0.27"]
 
 [project.optional-dependencies]
