@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use graphsolve::{
     CalculateCompressorParams, CalculatePressureDropParams, CalculateTurboMachineParams, Error,
-    FlowCorrelationName, GraphSolve, SolveNetworkParams, TOOL_NAMES,
+    FlowCorrelationName, GraphSolve, SolveNetworkParams, TrickleDetailParams, TOOL_NAMES,
 };
 use serde_json::json;
 use wiremock::matchers::{header, method, path, query_param};
@@ -738,7 +738,7 @@ fn every_tool_in_the_spec_is_named() {
         .map(|(_, item)| item["post"]["operationId"].as_str().unwrap())
         .collect();
 
-    assert_eq!(tools.len(), 101);
+    assert_eq!(tools.len(), 102);
     for tool in tools {
         assert!(TOOL_NAMES.contains(&tool), "{tool} has no method");
     }
@@ -868,6 +868,51 @@ async fn nested_machine_and_composition_blocks_pass_through_unchanged() {
     assert_eq!(body["turbo_machine"], machine);
     assert_eq!(body["composition"], composition);
     assert!(!body.as_object().unwrap().contains_key("fluid"));
+}
+
+#[tokio::test]
+async fn trickle_detail_sends_its_options_and_imposed_states_unchanged() {
+    let server = MockServer::start().await;
+    mount_token(&server, "tok-1", 3600).await;
+    mount_tool(
+        &server,
+        "trickle_detail",
+        ResponseTemplate::new(200).set_body_json(envelope("success", 1)),
+    )
+    .await;
+
+    let options = json!({ "separated_only": true, "oil_water_interface": "wavy" });
+    let state = json!({
+        "holdups": { "gas": 0.6, "oil": 0.3, "water": 0.1 },
+        "mixture_velocity_m_s": 2.0
+    });
+    client(&server)
+        .trickle_detail(TrickleDetailParams {
+            pressure: 5.0,
+            density: vec![40.0, 800.0, 1020.0],
+            viscosity: vec![1.5e-5, 2.0e-3, 6.0e-4],
+            ift: 0.02,
+            diameter: 0.15,
+            roughness: 4.5e-5,
+            velocity: vec![2.0, 0.5, 0.1],
+            angle: 90.0,
+            options: Some(options.clone()),
+            evaluate_at: Some(vec![state.clone()]),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+
+    let requests = server.received_requests().await.unwrap();
+    let body: serde_json::Value = requests
+        .iter()
+        .find(|r| r.url.path() == "/v1/tools/trickle_detail")
+        .expect("no tool call")
+        .body_json()
+        .unwrap();
+    assert_eq!(body["options"], options);
+    assert_eq!(body["evaluate_at"], json!([state]));
+    assert!(!body.as_object().unwrap().contains_key("scan"));
 }
 
 #[tokio::test]

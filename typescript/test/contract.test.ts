@@ -506,7 +506,7 @@ describe("the generated surface", () => {
     const methods = GeneratedMethods.prototype as unknown as Record<string, unknown>;
     const missing = tools.filter((tool) => typeof methods[tool] !== "function");
     expect(missing).toEqual([]);
-    expect(tools).toHaveLength(101);
+    expect(tools).toHaveLength(102);
   });
 
   it("forwards to the named tool", async () => {
@@ -563,6 +563,37 @@ describe("the generated surface", () => {
     expect(body.turbo_machine).toEqual(machine);
     expect(body.composition).toEqual(composition);
     expect("fluid" in body).toBe(false);
+  });
+
+  it("sends trickle_detail options and imposed states unchanged", async () => {
+    let path = "";
+    let body: Record<string, unknown> = {};
+    const gs = authed((url, init) => {
+      path = new URL(url).pathname;
+      body = bodyOf(init);
+      return json(200, envelope({ result: {} }));
+    });
+
+    const options = { separated_only: true, oil_water_interface: "wavy" };
+    const evaluate_at = [
+      { holdups: { gas: 0.6, oil: 0.3, water: 0.1 }, mixture_velocity_m_s: 2.0 },
+    ];
+    await gs.trickle_detail({
+      pressure: 5.0,
+      density: [40.0, 800.0, 1020.0],
+      viscosity: [1.5e-5, 2.0e-3, 6.0e-4],
+      ift: 0.02,
+      diameter: 0.15,
+      roughness: 4.5e-5,
+      velocity: [2.0, 0.5, 0.1],
+      angle: 90.0,
+      options,
+      evaluate_at,
+    });
+    expect(path).toBe("/v1/tools/trickle_detail");
+    expect(body.options).toEqual(options);
+    expect(body.evaluate_at).toEqual(evaluate_at);
+    expect("scan" in body).toBe(false);
   });
 
   it("posts the compression train and calibration tools to their paths", async () => {

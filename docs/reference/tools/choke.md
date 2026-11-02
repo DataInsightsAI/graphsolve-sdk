@@ -15,7 +15,7 @@ Pressure drop across a choke of known diameter at given rates (Sachdeva multipha
 | Name | Type | Required | Description |
 |---|---|---|---|
 | `choke_diameter` | number | yes | Choke diameter in meters |
-| `composition` | object | no | Compositional stream in place of the black-oil rates and properties: components, mole fractions, a cubic equation of state and `mass_rate` (kg/s). The choke is then the compositional choke edge's: the homogeneous orifice, or Sachdeva's model for a two-phase stream, with no pressure recovery, so `pipe_diameter_ratio` and `perry_multiplier` do not apply. |
+| `composition` | object | no | Compositional stream in place of the black-oil rates and properties: components, mole fractions, a cubic equation of state and `mass_rate` (kg/s). The choke is then the compositional choke edge's: Sachdeva's model for every slip model, with the network's default pressure recovery, so `pipe_diameter_ratio` and `perry_multiplier` do not apply. |
 | `discharge_coefficient` | number | no | Choke discharge coefficient Cd, in (0, 1] (default: 0.68441971). The mass rate at a given pressure ratio is proportional to Cd. |
 | `dissolved_gas_ratio` | number | no | Dissolved gas-oil ratio in Sm3/Sm3 (default: 90) |
 | `gas_mw` | number | no | Gas molecular weight in g/mol (default: 19.83) |

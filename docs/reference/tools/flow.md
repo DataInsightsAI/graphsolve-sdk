@@ -15,7 +15,7 @@ Multiphase pressure gradient at one point in a pipe using a chosen correlation. 
 | Name | Type | Required | Description |
 |---|---|---|---|
 | `angle` | number | yes | Pipe angle from vertical in degrees, in the flow direction (0=vertical upflow, 90=horizontal, 180=vertical downflow) |
-| `correlation` | string | yes | Multiphase flow correlation (e.g. "Beggs-Brill", "Griffith-Wallis", "KISS"). One of `Aziz`, `Baxendell-Thomas`, `Beggs-Brill`, `CHAOS`, `Dukler`, `Duns-Ros`, `Fancher-Brown`, `GOAT`, `Gray`, `Griffith-Wallis`, `Hagedorn-Slug`, `KISS` and 9 more. |
+| `correlation` | string | yes | Multiphase flow correlation (e.g. "Beggs-Brill", "Griffith-Wallis", "KISS"). One of `Aziz`, `Baxendell-Thomas`, `Beggs-Brill`, `CHAOS`, `Dukler`, `Duns-Ros`, `Fancher-Brown`, `GOAT`, `Gray`, `Griffith-Wallis`, `Hagedorn-Slug`, `KISS` and 10 more. |
 | `density` | array of number | yes | Densities [gas, oil, water] in kg/m3 |
 | `diameter` | number | yes | Pipe diameter in meters |
 | `ift` | number | yes | Gas-liquid interfacial tension in N/m |
@@ -168,6 +168,127 @@ Run every multiphase pressure-drop correlation (or a subset) on one segment and 
             "roughness": 0.0001,
             "velocity": [2.0, 1.0, 0.0],
             "viscosity": [1e-05, 0.001, 0.001]
+        }))
+        .await?;
+    println!("{:?}", response.result);
+    ```
+
+## `trickle_detail`
+
+TRICKLE's three-phase flow structure at one point, as the transient solvers read it: regime weights, the nine fields, slug unit, cores, oil-water structure and the forces per phase and interface, with optional imposed states.
+
+**Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.trickle_detail) · [TypeScript](../typescript/api/classes/GraphSolve.md#trickle_detail) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.trickle_detail)
+
+### Parameters
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `angle` | number | yes | Pipe angle from vertical in degrees, in the flow direction (0=vertical upflow, 90=horizontal, 180=vertical downflow) |
+| `density` | array of number | yes | Densities [gas, oil, water] in kg/m3 |
+| `diameter` | number | yes | Pipe diameter in meters |
+| `evaluate_at` | array | no | Imposed states at which to evaluate the forces, as a transient scheme does. |
+| `ift` | number | yes | Gas-oil interfacial tension in N/m (`iftog` of calculate_fluid_properties); the gas-liquid tension itself when `ift_gas_water` is not given |
+| `ift_gas_water` | number | no | Gas-water interfacial tension in N/m (`iftgw`). Given, the gas-liquid tension TRICKLE reads is `ift` and this weighted by the water share of the liquid's superficial velocity, as the transient solvers form it; omitted, it is `ift` |
+| `ift_oil_water` | number | no | Oil-water interfacial tension in N/m (`iftow`; default `ift`) |
+| `options` | object | no |  |
+| `pressure` | number | yes | Pressure in MPa |
+| `roughness` | number | yes | Absolute pipe roughness in meters |
+| `scan` | boolean | no | Scan v_SG at the point's liquid rates for the onsets and the gradient's slopes (default true; a few hundred structure solves, milliseconds). |
+| `velocity` | array of number | yes | Superficial velocities [gas, oil, water] in m/s |
+| `viscosity` | array of number | yes | Viscosities [gas, oil, water] in Pa.s |
+
+### Example: 2 degree upflow, with the slips at an imposed holdup
+
+=== "Python"
+
+    ```python
+    from graphsolve import GraphSolve
+
+    gs = GraphSolve()
+    response = gs.trickle_detail(
+        angle=88.0,
+        density=[17.0, 760.0, 1000.0],
+        diameter=0.1557,
+        evaluate_at=[
+            {
+                "holdups": {
+                    "gas": 0.9,
+                    "oil": 0.1,
+                    "water": 0.0
+                },
+                "mixture_velocity_m_s": 3.0
+            }
+        ],
+        ift=0.024,
+        ift_oil_water=0.04,
+        pressure=1.48,
+        roughness=5.6e-06,
+        velocity=[3.0, 0.005, 0.0],
+        viscosity=[1.75e-05, 0.0013, 0.001],
+    )
+    print(response["result"])
+    ```
+
+=== "TypeScript"
+
+    ```ts
+    import { GraphSolve } from "@graphsolve/sdk";
+
+    const gs = new GraphSolve();
+    const response = await gs.trickle_detail({
+        "angle": 88.0,
+        "density": [17.0, 760.0, 1000.0],
+        "diameter": 0.1557,
+        "evaluate_at": [
+            {
+                "holdups": {
+                    "gas": 0.9,
+                    "oil": 0.1,
+                    "water": 0.0
+                },
+                "mixture_velocity_m_s": 3.0
+            }
+        ],
+        "ift": 0.024,
+        "ift_oil_water": 0.04,
+        "pressure": 1.48,
+        "roughness": 5.6e-06,
+        "velocity": [3.0, 0.005, 0.0],
+        "viscosity": [1.75e-05, 0.0013, 0.001]
+    });
+    console.log(response.result);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use graphsolve::GraphSolve;
+    use serde_json::json;
+
+    let gs = GraphSolve::new()?;
+    let response = gs
+        .call("trickle_detail", &json!({
+            "angle": 88.0,
+            "density": [17.0, 760.0, 1000.0],
+            "diameter": 0.1557,
+            "evaluate_at": [
+                {
+                    "holdups": {
+                        "gas": 0.9,
+                        "oil": 0.1,
+                        "water": 0.0
+                    },
+                    "mixture_velocity_m_s": 3.0
+                }
+            ],
+            "ift": 0.024,
+            "ift_oil_water": 0.04,
+            "pressure": 1.48,
+            "roughness": 5.6e-06,
+            "velocity": [3.0, 0.005, 0.0],
+            "viscosity": [1.75e-05, 0.0013, 0.001]
         }))
         .await?;
     println!("{:?}", response.result);

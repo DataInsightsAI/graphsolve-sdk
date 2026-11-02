@@ -51,7 +51,7 @@ This tool takes no arguments.
 
 ## `run_transient_field`
 
-Transient multiphase pipe flow, fully-implicit four-field two-fluid (Graphsolve-Field): for severe slugging and countercurrent flow.
+Transient multiphase pipe flow, fully implicit three-zone six-field (Graphsolve-Field): for severe slugging and countercurrent flow.
 
 **Price:** Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
 
@@ -61,9 +61,9 @@ Transient multiphase pipe flow, fully-implicit four-field two-fluid (Graphsolve-
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `transient_json` | object or array of object or string | yes | Transient request, as a JSON object or a JSON string. Pressure MPa, rates kSm3/day at standard conditions, temperature K, lengths m. Pipe and fluid, in one of two forms: - Network: `network_payload` (a model-format network: `format`, `elements`, `fluids`, `sources`) and `path`: `{"select": "edges", "edges": [{"edge_id": "<id>"}, ...]}`, the pipe edges of one route listed INLET FIRST. They are joined in that order and not checked for continuity; each keeps its drawn direction (`source` upstream) and lays out its `pipe_geometry` segments from `source` to `target` in the order given (survey stations by measured depth). Only the geometry and the fluid are read from the network: the fluid named by the first edge's source node, or the only fluid. Annulus and zero-length restriction segments are not represented. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network fluid entry `{id, model_type, model}`. A segment has `pipe_length` m, `pipe_diameter` m and `pipe_angle` in degrees from vertical along the flow (0 flowing up, 90 horizontal, 180 flowing down), and optionally `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this segment only), and `surrounding_temperature` K with `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange). Black-oil and table fluids are read from `reference_oil_density`, `dissolved_gas_ratio`, `reference_gas_mw` and `salinity` only, through a fixed black-oil correlation set; `fluid_type`, correlation choices and `pvt_table` are ignored. An equation-of-state fluid is tabulated over (P, T) first. `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`; default `hours`), and `record_interval_s`, the recording interval in seconds whatever the unit (default 30). `boundary`, the state at t = 0: `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the total gas, dissolved included, and an omitted rate is 0; `inlet_temperature` K; `water_salinity` ppm of the water entering; and `outlet`: `{"type": "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area": <m2>, "cd": <default 0.84>}`. `outlet_pressure`, `inlet_temperature` and a non-zero rate are required in both forms; nothing is taken from the network's nodes. The run starts from the steady state of this boundary, and Graphsolve-Flux needs a `pressure` outlet at t = 0. `schedule`: `[{"at": <time in time.unit>, "set": {<boundary fields>}}]`. Fields not set carry forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the previous event (t = 0 counts as one), so a lone event at 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` not given at t = 0 applies from the previous event instead. `inlet_temperature`, choke `cd` and the outlet `type` step at the event. For a step in a ramped value, add an event with an empty `set` at the same `at`, listed first. The outlet and the inlet rates are the only valve controls: close the outlet for a valve slam, set the rates to 0 for a shut-in. `results`: `detail` is `summary` (default: pressure, gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles` (the `variables` listed, default those three, at every `cell_stride`-th cell plus both ends, or at the `cells` listed by index from 0 at the outlet) or `full` (every variable the scheme carries, every cell; `variables`, `cell_stride` and `cells` are ignored). Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor, sound_speed. Responses over about two million values are refused. `discretisation`: `max_cell_length` m (default 50). `pvt`, for an equation-of-state fluid only: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and boundary when omitted; outside them properties are held at the edge) and `pressure_nodes` (default 240) and `temperature_nodes` (default 24). The table's water is fresh water; `salinity_ppm` does not change it. Each scheme holds its cells in a pressure window and clamps anything outside it: Flux 0.5-15 MPa (and 250-450 K), Wave 0.01-50 MPa, Field 0.05-100 MPa. Solver options cannot be set. `solver` is set from the tool. The result is `stats` (cells, length_m, simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with `values[sample * n_cells + cell]`. |
+| `transient_json` | object or array of object or string | yes | Transient request, as a JSON object or a JSON string. Pressure MPa, rates kSm3/day at standard conditions, temperature K, lengths m. Pipe and fluid, in one of three forms: - Line: `fluids` (network fluid entries), a `source` node, a `line` of edges listed INLET FIRST and a `sink` node, each block in the network solver's schema. `source` is `{"node_type": "fixed_rate_source", "source_sink_data": {...}}` (its `fixed_rate`, cuts or `phase_rates` split as a network solve splits them; `inlet_temperature`) or a `pressure_dependent_source` with `inflow`, an engine inflow model (`"table"` with `ipr_table` taken point for point, the points' temperatures unused; any other model tabulated). Each `line` edge is `{"edge_type": "pipe", "pipe_data": {...}}`, its `pipe_geometry` from the edge's target end, with `injection` calculation points as gas-lift points at their measured depth; a `choke` edge with `choke_data` may close the line as the outlet choke. `sink` is a `fixed_pressure_sink` whose `boundary_pressure` is the outlet pressure. Field, Flux and Wave all take it, except that only Field takes a well inflow or gas lift, and Flux needs a pressure outlet at t = 0. - Network: `network_payload` (a model-format network: `format`, `elements`, `fluids`, `sources`) and `path`: `{"select": "edges", "edges": [{"edge_id": "<id>"}, ...]}`, the pipe edges of one route listed INLET FIRST. They are joined in that order and not checked for continuity; each keeps its drawn direction (`source` upstream) with its `pipe_geometry` laid out as a network solve lays it, from the `target` end to the `source` end, the inlet at the last listed segment (survey stations by measured depth). Only the geometry and the fluid are read from the network: the fluid named by the first edge's source node, or the only fluid. An annulus or a restriction segment is refused. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network fluid entry `{id, model_type, model}`. A segment has `pipe_length` m, `pipe_diameter` m and `pipe_angle` in degrees from vertical along the flow (0 flowing up, 90 horizontal, 180 flowing down), and optionally `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this segment only), and `surrounding_temperature` K with `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange). Every fluid is baked once into a (P, T) table from the engine's own fluid model: a black-oil or table fluid's `fluid_type`, correlation choices, `pvt_table` and `salinity` are honoured (`reference_oil_density` and `reference_gas_mw` are required), an equation-of-state fluid's water takes `pvt.salinity_ppm`. `flow_model` (optional): omitted, every scheme runs the TRICKLE three-phase structure; `trickle` runs TRICKLE with the water on its own velocity (Field: its own field and momentum row, and `oil_holdup`, `water_holdup`, `oil_velocity`, `water_velocity` returned); `goat` runs GOAT's two-fluid closure on one lumped liquid through the same structure; `tfs` Wave's two-fluid friction at the boundary rates with the drift-flux gas velocity (Wave only; Flux and Field refuse it). `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`; default `hours`), and `record_interval_s`, the recording interval in seconds whatever the unit (default 30). `boundary`, the state at t = 0: `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the total gas, dissolved included, and an omitted rate is 0; `inlet_temperature` K; `water_salinity` ppm of the water entering; and `outlet`: `{"type": "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area": <m2>, "cd": <default 0.84>}`. In the network and bare forms `outlet_pressure`, `inlet_temperature` and a non-zero rate are required; nothing is taken from the network's nodes. In the line form the nodes give them: `boundary` then adds the outlet type, `water_salinity` and `lift_gas_rate`, and may give the pressure or temperature only where the nodes do not; a line's rates are always its source's. The run starts from the steady state of this boundary, and Graphsolve-Flux needs a `pressure` outlet at t = 0. `schedule`: `[{"at": <time in time.unit>, "set": {<boundary fields>}}]`. Fields not set carry forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the previous event (t = 0 counts as one), so a lone event at 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` first given at a later event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd` and the outlet `type` step at the event. For a step in a ramped value, add an event with an empty `set` at the same `at`, listed first. The outlet and the inlet rates are the only valve controls: close the outlet for a valve slam, set the rates to 0 for a shut-in. In the line form a `set` takes `source` (fields of `source_sink_data`, carried forward and split again) and `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`. `results`: `detail` is `summary` (default: pressure, gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles` (the `variables` listed, default those three, at every `cell_stride`-th cell plus both ends, or at the `cells` listed by index from 0 at the outlet) or `full` (every variable the scheme carries, every cell; `variables`, `cell_stride` and `cells` are ignored). Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor, sound_speed, oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about two million values are refused. `discretisation`: `max_cell_length` m (default 50). `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted; the schemes hold their states inside the box, so widen it for a run that may leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36) and, for an equation-of-state fluid, `salinity_ppm` of its water. `gas_transfer`: how gas moves between solution and the free phase, `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"` or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once and never dissolves again. Field and Flux take any setting (Field takes `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is set, the steady state the run starts from holds the oil at saturation. `slug_capturing`: true (Field only, default false) runs the closure's separated flow alone, so slugs form on the grid as cells that fill with liquid; it needs cells of the order of the pipe diameter. `steps`: Field takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its CFL limit and it refuses `steps`. `equipment` (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`, `{"type": "table", "points": [{"pressure", "oil_rate", "gas_rate", "water_rate"}]}` (MPa, kSm3/day; the highest pressure is where it stops; above it the reservoir takes fluid back along the last segment) or `{"type": "inflow_model", "inflow": <engine inflow input with its fluid>, "points": <default 60>}`, the inlet rates then following the inlet pressure and the boundary's rates ignored; `gas_lift`, `[{"distance_from_inlet" m, "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}]` supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into the tubing or, with a valve, into the annulus, which passes it one way and chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas": {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"}, "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas, annulus pressures and the separator's pressure, level and outflows. Every scheme works inside the pressure and temperature box its fluid was baked over: Wave clamps a cell to it, Flux refuses a step that would leave it and retries shorter (a step accepted at the shortest length is counted in `failed_steps`), and Field treats a state outside it as a failed step. Solver options other than `flow_model`, `steps`, `gas_transfer`, `slug_capturing` and `equipment` cannot be set. `solver` is set from the tool. Graphsolve-Field also takes a network (gathering and splitting, one outlet or several, `boundary.outlets`): `network_payload` with `network.branches` (each `{name, path}`), or bare `branches` (each `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`). The result is `stats` (cells, length_m, simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with `values[sample * n_cells + cell]`. |
 
-### Example: a short run on a bare pipe
+### Example: a line in the network solver's terms
 
 === "Python"
 
@@ -73,47 +73,88 @@ Transient multiphase pipe flow, fully-implicit four-field two-fluid (Graphsolve-
     gs = GraphSolve()
     response = gs.run_transient_field(
         transient_json={
-            "boundary": {
-                "gas_rate": 60.0,
-                "inlet_temperature": 323.15,
-                "oil_rate": 0.5,
-                "outlet_pressure": 2.0,
-                "water_rate": 0.1
-            },
             "discretisation": {
-                "max_cell_length": 50.0
+                "max_cell_length": 100.0
             },
-            "fluid": {
-                "id": "f1",
-                "model": {
-                    "dissolved_gas_ratio": 120.0,
-                    "fluid_type": "oil",
-                    "reference_gas_mw": 20.0,
-                    "reference_oil_density": 850.0,
-                    "salinity": 30000.0
-                },
-                "model_type": "black_oil"
-            },
-            "results": {
-                "detail": "summary"
-            },
-            "segments": [
+            "fluids": [
                 {
-                    "heat_transfer_coefficient": 25.0,
-                    "pipe_angle": 90.0,
-                    "pipe_diameter": 0.2,
-                    "pipe_length": 200.0,
-                    "surrounding_temperature": 279.0
-                },
-                {
-                    "pipe_angle": 0.0,
-                    "pipe_diameter": 0.2,
-                    "pipe_length": 100.0
+                    "id": "oil",
+                    "model": {
+                        "dissolved_gas_ratio": 100.0,
+                        "fluid_type": "oil",
+                        "reference_gas_mw": 20.0,
+                        "reference_oil_density": 850.0,
+                        "salinity": 30000.0
+                    },
+                    "model_type": "black_oil"
                 }
             ],
+            "line": [
+                {
+                    "edge_type": "pipe",
+                    "pipe_data": {
+                        "correlation": "Beggs-Brill",
+                        "pipe_geometry": [
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 0.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 300.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 285.0
+                            },
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 92.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 1500.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 279.0
+                            }
+                        ]
+                    }
+                }
+            ],
+            "results": {
+                "cell_stride": 4,
+                "detail": "profiles",
+                "variables": ["pressure", "gas_fraction"]
+            },
+            "schedule": [
+                {
+                    "at": 20.0,
+                    "set": {}
+                },
+                {
+                    "at": 20.0,
+                    "set": {
+                        "source": {
+                            "fixed_rate": 0.533
+                        }
+                    }
+                }
+            ],
+            "sink": {
+                "node_type": "fixed_pressure_sink",
+                "source_sink_data": {
+                    "boundary_pressure": 2.0
+                }
+            },
+            "source": {
+                "node_type": "fixed_rate_source",
+                "source_sink_data": {
+                    "dissolved_gas_ratio": 125.0,
+                    "fixed_rate": 0.8,
+                    "fluid_id": "oil",
+                    "inlet_temperature": 330.0,
+                    "water_cut": 20.0
+                }
+            },
             "time": {
-                "record_interval_s": 15.0,
-                "total": 2.0,
+                "record_interval_s": 60.0,
+                "total": 30.0,
                 "unit": "minutes"
             }
         },
@@ -129,47 +170,88 @@ Transient multiphase pipe flow, fully-implicit four-field two-fluid (Graphsolve-
     const gs = new GraphSolve();
     const response = await gs.run_transient_field({
         "transient_json": {
-            "boundary": {
-                "gas_rate": 60.0,
-                "inlet_temperature": 323.15,
-                "oil_rate": 0.5,
-                "outlet_pressure": 2.0,
-                "water_rate": 0.1
-            },
             "discretisation": {
-                "max_cell_length": 50.0
+                "max_cell_length": 100.0
             },
-            "fluid": {
-                "id": "f1",
-                "model": {
-                    "dissolved_gas_ratio": 120.0,
-                    "fluid_type": "oil",
-                    "reference_gas_mw": 20.0,
-                    "reference_oil_density": 850.0,
-                    "salinity": 30000.0
-                },
-                "model_type": "black_oil"
-            },
-            "results": {
-                "detail": "summary"
-            },
-            "segments": [
+            "fluids": [
                 {
-                    "heat_transfer_coefficient": 25.0,
-                    "pipe_angle": 90.0,
-                    "pipe_diameter": 0.2,
-                    "pipe_length": 200.0,
-                    "surrounding_temperature": 279.0
-                },
-                {
-                    "pipe_angle": 0.0,
-                    "pipe_diameter": 0.2,
-                    "pipe_length": 100.0
+                    "id": "oil",
+                    "model": {
+                        "dissolved_gas_ratio": 100.0,
+                        "fluid_type": "oil",
+                        "reference_gas_mw": 20.0,
+                        "reference_oil_density": 850.0,
+                        "salinity": 30000.0
+                    },
+                    "model_type": "black_oil"
                 }
             ],
+            "line": [
+                {
+                    "edge_type": "pipe",
+                    "pipe_data": {
+                        "correlation": "Beggs-Brill",
+                        "pipe_geometry": [
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 0.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 300.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 285.0
+                            },
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 92.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 1500.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 279.0
+                            }
+                        ]
+                    }
+                }
+            ],
+            "results": {
+                "cell_stride": 4,
+                "detail": "profiles",
+                "variables": ["pressure", "gas_fraction"]
+            },
+            "schedule": [
+                {
+                    "at": 20.0,
+                    "set": {}
+                },
+                {
+                    "at": 20.0,
+                    "set": {
+                        "source": {
+                            "fixed_rate": 0.533
+                        }
+                    }
+                }
+            ],
+            "sink": {
+                "node_type": "fixed_pressure_sink",
+                "source_sink_data": {
+                    "boundary_pressure": 2.0
+                }
+            },
+            "source": {
+                "node_type": "fixed_rate_source",
+                "source_sink_data": {
+                    "dissolved_gas_ratio": 125.0,
+                    "fixed_rate": 0.8,
+                    "fluid_id": "oil",
+                    "inlet_temperature": 330.0,
+                    "water_cut": 20.0
+                }
+            },
             "time": {
-                "record_interval_s": 15.0,
-                "total": 2.0,
+                "record_interval_s": 60.0,
+                "total": 30.0,
                 "unit": "minutes"
             }
         }
@@ -187,47 +269,88 @@ Transient multiphase pipe flow, fully-implicit four-field two-fluid (Graphsolve-
     let response = gs
         .call("run_transient_field", &json!({
             "transient_json": {
-                "boundary": {
-                    "gas_rate": 60.0,
-                    "inlet_temperature": 323.15,
-                    "oil_rate": 0.5,
-                    "outlet_pressure": 2.0,
-                    "water_rate": 0.1
-                },
                 "discretisation": {
-                    "max_cell_length": 50.0
+                    "max_cell_length": 100.0
                 },
-                "fluid": {
-                    "id": "f1",
-                    "model": {
-                        "dissolved_gas_ratio": 120.0,
-                        "fluid_type": "oil",
-                        "reference_gas_mw": 20.0,
-                        "reference_oil_density": 850.0,
-                        "salinity": 30000.0
-                    },
-                    "model_type": "black_oil"
-                },
-                "results": {
-                    "detail": "summary"
-                },
-                "segments": [
+                "fluids": [
                     {
-                        "heat_transfer_coefficient": 25.0,
-                        "pipe_angle": 90.0,
-                        "pipe_diameter": 0.2,
-                        "pipe_length": 200.0,
-                        "surrounding_temperature": 279.0
-                    },
-                    {
-                        "pipe_angle": 0.0,
-                        "pipe_diameter": 0.2,
-                        "pipe_length": 100.0
+                        "id": "oil",
+                        "model": {
+                            "dissolved_gas_ratio": 100.0,
+                            "fluid_type": "oil",
+                            "reference_gas_mw": 20.0,
+                            "reference_oil_density": 850.0,
+                            "salinity": 30000.0
+                        },
+                        "model_type": "black_oil"
                     }
                 ],
+                "line": [
+                    {
+                        "edge_type": "pipe",
+                        "pipe_data": {
+                            "correlation": "Beggs-Brill",
+                            "pipe_geometry": [
+                                {
+                                    "heat_transfer_coefficient": 20.0,
+                                    "pipe_angle": 0.0,
+                                    "pipe_diameter": 0.15,
+                                    "pipe_length": 300.0,
+                                    "pipe_roughness": 4.6e-05,
+                                    "segment_type": "pipe",
+                                    "surrounding_temperature": 285.0
+                                },
+                                {
+                                    "heat_transfer_coefficient": 20.0,
+                                    "pipe_angle": 92.0,
+                                    "pipe_diameter": 0.15,
+                                    "pipe_length": 1500.0,
+                                    "pipe_roughness": 4.6e-05,
+                                    "segment_type": "pipe",
+                                    "surrounding_temperature": 279.0
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "results": {
+                    "cell_stride": 4,
+                    "detail": "profiles",
+                    "variables": ["pressure", "gas_fraction"]
+                },
+                "schedule": [
+                    {
+                        "at": 20.0,
+                        "set": {}
+                    },
+                    {
+                        "at": 20.0,
+                        "set": {
+                            "source": {
+                                "fixed_rate": 0.533
+                            }
+                        }
+                    }
+                ],
+                "sink": {
+                    "node_type": "fixed_pressure_sink",
+                    "source_sink_data": {
+                        "boundary_pressure": 2.0
+                    }
+                },
+                "source": {
+                    "node_type": "fixed_rate_source",
+                    "source_sink_data": {
+                        "dissolved_gas_ratio": 125.0,
+                        "fixed_rate": 0.8,
+                        "fluid_id": "oil",
+                        "inlet_temperature": 330.0,
+                        "water_cut": 20.0
+                    }
+                },
                 "time": {
-                    "record_interval_s": 15.0,
-                    "total": 2.0,
+                    "record_interval_s": 60.0,
+                    "total": 30.0,
                     "unit": "minutes"
                 }
             }
@@ -238,7 +361,7 @@ Transient multiphase pipe flow, fully-implicit four-field two-fluid (Graphsolve-
 
 ## `run_transient_flux`
 
-Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the general-purpose scheme, carrying temperature, the oil/water split and salinity.
+Transient multiphase pipe flow, semi-implicit three-fluid (Graphsolve-Flux): the general-purpose scheme, carrying temperature, the oil/water split and salinity.
 
 **Price:** Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
 
@@ -248,9 +371,9 @@ Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the 
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `transient_json` | object or array of object or string | yes | Transient request, as a JSON object or a JSON string. Pressure MPa, rates kSm3/day at standard conditions, temperature K, lengths m. Pipe and fluid, in one of two forms: - Network: `network_payload` (a model-format network: `format`, `elements`, `fluids`, `sources`) and `path`: `{"select": "edges", "edges": [{"edge_id": "<id>"}, ...]}`, the pipe edges of one route listed INLET FIRST. They are joined in that order and not checked for continuity; each keeps its drawn direction (`source` upstream) and lays out its `pipe_geometry` segments from `source` to `target` in the order given (survey stations by measured depth). Only the geometry and the fluid are read from the network: the fluid named by the first edge's source node, or the only fluid. Annulus and zero-length restriction segments are not represented. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network fluid entry `{id, model_type, model}`. A segment has `pipe_length` m, `pipe_diameter` m and `pipe_angle` in degrees from vertical along the flow (0 flowing up, 90 horizontal, 180 flowing down), and optionally `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this segment only), and `surrounding_temperature` K with `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange). Black-oil and table fluids are read from `reference_oil_density`, `dissolved_gas_ratio`, `reference_gas_mw` and `salinity` only, through a fixed black-oil correlation set; `fluid_type`, correlation choices and `pvt_table` are ignored. An equation-of-state fluid is tabulated over (P, T) first. `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`; default `hours`), and `record_interval_s`, the recording interval in seconds whatever the unit (default 30). `boundary`, the state at t = 0: `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the total gas, dissolved included, and an omitted rate is 0; `inlet_temperature` K; `water_salinity` ppm of the water entering; and `outlet`: `{"type": "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area": <m2>, "cd": <default 0.84>}`. `outlet_pressure`, `inlet_temperature` and a non-zero rate are required in both forms; nothing is taken from the network's nodes. The run starts from the steady state of this boundary, and Graphsolve-Flux needs a `pressure` outlet at t = 0. `schedule`: `[{"at": <time in time.unit>, "set": {<boundary fields>}}]`. Fields not set carry forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the previous event (t = 0 counts as one), so a lone event at 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` not given at t = 0 applies from the previous event instead. `inlet_temperature`, choke `cd` and the outlet `type` step at the event. For a step in a ramped value, add an event with an empty `set` at the same `at`, listed first. The outlet and the inlet rates are the only valve controls: close the outlet for a valve slam, set the rates to 0 for a shut-in. `results`: `detail` is `summary` (default: pressure, gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles` (the `variables` listed, default those three, at every `cell_stride`-th cell plus both ends, or at the `cells` listed by index from 0 at the outlet) or `full` (every variable the scheme carries, every cell; `variables`, `cell_stride` and `cells` are ignored). Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor, sound_speed. Responses over about two million values are refused. `discretisation`: `max_cell_length` m (default 50). `pvt`, for an equation-of-state fluid only: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and boundary when omitted; outside them properties are held at the edge) and `pressure_nodes` (default 240) and `temperature_nodes` (default 24). The table's water is fresh water; `salinity_ppm` does not change it. Each scheme holds its cells in a pressure window and clamps anything outside it: Flux 0.5-15 MPa (and 250-450 K), Wave 0.01-50 MPa, Field 0.05-100 MPa. Solver options cannot be set. `solver` is set from the tool. The result is `stats` (cells, length_m, simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with `values[sample * n_cells + cell]`. |
+| `transient_json` | object or array of object or string | yes | Transient request, as a JSON object or a JSON string. Pressure MPa, rates kSm3/day at standard conditions, temperature K, lengths m. Pipe and fluid, in one of three forms: - Line: `fluids` (network fluid entries), a `source` node, a `line` of edges listed INLET FIRST and a `sink` node, each block in the network solver's schema. `source` is `{"node_type": "fixed_rate_source", "source_sink_data": {...}}` (its `fixed_rate`, cuts or `phase_rates` split as a network solve splits them; `inlet_temperature`) or a `pressure_dependent_source` with `inflow`, an engine inflow model (`"table"` with `ipr_table` taken point for point, the points' temperatures unused; any other model tabulated). Each `line` edge is `{"edge_type": "pipe", "pipe_data": {...}}`, its `pipe_geometry` from the edge's target end, with `injection` calculation points as gas-lift points at their measured depth; a `choke` edge with `choke_data` may close the line as the outlet choke. `sink` is a `fixed_pressure_sink` whose `boundary_pressure` is the outlet pressure. Field, Flux and Wave all take it, except that only Field takes a well inflow or gas lift, and Flux needs a pressure outlet at t = 0. - Network: `network_payload` (a model-format network: `format`, `elements`, `fluids`, `sources`) and `path`: `{"select": "edges", "edges": [{"edge_id": "<id>"}, ...]}`, the pipe edges of one route listed INLET FIRST. They are joined in that order and not checked for continuity; each keeps its drawn direction (`source` upstream) with its `pipe_geometry` laid out as a network solve lays it, from the `target` end to the `source` end, the inlet at the last listed segment (survey stations by measured depth). Only the geometry and the fluid are read from the network: the fluid named by the first edge's source node, or the only fluid. An annulus or a restriction segment is refused. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network fluid entry `{id, model_type, model}`. A segment has `pipe_length` m, `pipe_diameter` m and `pipe_angle` in degrees from vertical along the flow (0 flowing up, 90 horizontal, 180 flowing down), and optionally `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this segment only), and `surrounding_temperature` K with `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange). Every fluid is baked once into a (P, T) table from the engine's own fluid model: a black-oil or table fluid's `fluid_type`, correlation choices, `pvt_table` and `salinity` are honoured (`reference_oil_density` and `reference_gas_mw` are required), an equation-of-state fluid's water takes `pvt.salinity_ppm`. `flow_model` (optional): omitted, every scheme runs the TRICKLE three-phase structure; `trickle` runs TRICKLE with the water on its own velocity (Field: its own field and momentum row, and `oil_holdup`, `water_holdup`, `oil_velocity`, `water_velocity` returned); `goat` runs GOAT's two-fluid closure on one lumped liquid through the same structure; `tfs` Wave's two-fluid friction at the boundary rates with the drift-flux gas velocity (Wave only; Flux and Field refuse it). `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`; default `hours`), and `record_interval_s`, the recording interval in seconds whatever the unit (default 30). `boundary`, the state at t = 0: `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the total gas, dissolved included, and an omitted rate is 0; `inlet_temperature` K; `water_salinity` ppm of the water entering; and `outlet`: `{"type": "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area": <m2>, "cd": <default 0.84>}`. In the network and bare forms `outlet_pressure`, `inlet_temperature` and a non-zero rate are required; nothing is taken from the network's nodes. In the line form the nodes give them: `boundary` then adds the outlet type, `water_salinity` and `lift_gas_rate`, and may give the pressure or temperature only where the nodes do not; a line's rates are always its source's. The run starts from the steady state of this boundary, and Graphsolve-Flux needs a `pressure` outlet at t = 0. `schedule`: `[{"at": <time in time.unit>, "set": {<boundary fields>}}]`. Fields not set carry forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the previous event (t = 0 counts as one), so a lone event at 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` first given at a later event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd` and the outlet `type` step at the event. For a step in a ramped value, add an event with an empty `set` at the same `at`, listed first. The outlet and the inlet rates are the only valve controls: close the outlet for a valve slam, set the rates to 0 for a shut-in. In the line form a `set` takes `source` (fields of `source_sink_data`, carried forward and split again) and `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`. `results`: `detail` is `summary` (default: pressure, gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles` (the `variables` listed, default those three, at every `cell_stride`-th cell plus both ends, or at the `cells` listed by index from 0 at the outlet) or `full` (every variable the scheme carries, every cell; `variables`, `cell_stride` and `cells` are ignored). Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor, sound_speed, oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about two million values are refused. `discretisation`: `max_cell_length` m (default 50). `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted; the schemes hold their states inside the box, so widen it for a run that may leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36) and, for an equation-of-state fluid, `salinity_ppm` of its water. `gas_transfer`: how gas moves between solution and the free phase, `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"` or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once and never dissolves again. Field and Flux take any setting (Field takes `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is set, the steady state the run starts from holds the oil at saturation. `slug_capturing`: true (Field only, default false) runs the closure's separated flow alone, so slugs form on the grid as cells that fill with liquid; it needs cells of the order of the pipe diameter. `steps`: Field takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its CFL limit and it refuses `steps`. `equipment` (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`, `{"type": "table", "points": [{"pressure", "oil_rate", "gas_rate", "water_rate"}]}` (MPa, kSm3/day; the highest pressure is where it stops; above it the reservoir takes fluid back along the last segment) or `{"type": "inflow_model", "inflow": <engine inflow input with its fluid>, "points": <default 60>}`, the inlet rates then following the inlet pressure and the boundary's rates ignored; `gas_lift`, `[{"distance_from_inlet" m, "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}]` supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into the tubing or, with a valve, into the annulus, which passes it one way and chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas": {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"}, "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas, annulus pressures and the separator's pressure, level and outflows. Every scheme works inside the pressure and temperature box its fluid was baked over: Wave clamps a cell to it, Flux refuses a step that would leave it and retries shorter (a step accepted at the shortest length is counted in `failed_steps`), and Field treats a state outside it as a failed step. Solver options other than `flow_model`, `steps`, `gas_transfer`, `slug_capturing` and `equipment` cannot be set. `solver` is set from the tool. Graphsolve-Field also takes a network (gathering and splitting, one outlet or several, `boundary.outlets`): `network_payload` with `network.branches` (each `{name, path}`), or bare `branches` (each `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`). The result is `stats` (cells, length_m, simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with `values[sample * n_cells + cell]`. |
 
-### Example: a network path with a back-pressure step at 30 minutes
+### Example: a line in the network solver's terms, the source cut at 20 minutes
 
 === "Python"
 
@@ -260,123 +383,50 @@ Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the 
     gs = GraphSolve()
     response = gs.run_transient_flux(
         transient_json={
-            "boundary": {
-                "gas_rate": 100.0,
-                "inlet_temperature": 330.0,
-                "oil_rate": 0.8,
-                "outlet_pressure": 2.0,
-                "water_rate": 0.2
-            },
             "discretisation": {
                 "max_cell_length": 100.0
             },
-            "network_payload": {
-                "elements": [
-                    {
-                        "data": {
-                            "id": "well",
-                            "node_type": "fixed_rate_source",
-                            "source_sink_data": {
-                                "dissolved_gas_ratio": 125,
-                                "fixed_rate": 0.8,
-                                "fluid_id": "oil",
-                                "inlet_temperature": 330,
-                                "water_cut": 20
-                            }
-                        },
-                        "group": "nodes"
+            "fluids": [
+                {
+                    "id": "oil",
+                    "model": {
+                        "dissolved_gas_ratio": 100.0,
+                        "fluid_type": "oil",
+                        "reference_gas_mw": 20.0,
+                        "reference_oil_density": 850.0,
+                        "salinity": 30000.0
                     },
-                    {
-                        "data": {
-                            "id": "riser-base",
-                            "node_type": "network_node"
-                        },
-                        "group": "nodes"
-                    },
-                    {
-                        "data": {
-                            "id": "topside",
-                            "node_type": "fixed_pressure_sink",
-                            "source_sink_data": {
-                                "boundary_pressure": 2.0
-                            }
-                        },
-                        "group": "nodes"
-                    },
-                    {
-                        "data": {
-                            "edge_type": "pipe",
-                            "id": "flowline",
-                            "pipe_data": {
-                                "correlation": "Beggs-Brill",
-                                "pipe_geometry": [
-                                    {
-                                        "heat_transfer_coefficient": 20,
-                                        "pipe_angle": 92,
-                                        "pipe_diameter": 0.15,
-                                        "pipe_length": 1500,
-                                        "pipe_roughness": 4.6e-05,
-                                        "segment_type": "pipe",
-                                        "surrounding_temperature": 279
-                                    }
-                                ]
+                    "model_type": "black_oil"
+                }
+            ],
+            "line": [
+                {
+                    "edge_type": "pipe",
+                    "pipe_data": {
+                        "correlation": "Beggs-Brill",
+                        "pipe_geometry": [
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 0.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 300.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 285.0
                             },
-                            "source": "well",
-                            "target": "riser-base"
-                        },
-                        "group": "edges"
-                    },
-                    {
-                        "data": {
-                            "edge_type": "pipe",
-                            "id": "riser",
-                            "pipe_data": {
-                                "correlation": "Beggs-Brill",
-                                "pipe_geometry": [
-                                    {
-                                        "heat_transfer_coefficient": 20,
-                                        "pipe_angle": 0,
-                                        "pipe_diameter": 0.15,
-                                        "pipe_length": 300,
-                                        "pipe_roughness": 4.6e-05,
-                                        "segment_type": "pipe",
-                                        "surrounding_temperature": 285
-                                    }
-                                ]
-                            },
-                            "source": "riser-base",
-                            "target": "topside"
-                        },
-                        "group": "edges"
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 92.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 1500.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 279.0
+                            }
+                        ]
                     }
-                ],
-                "fluids": [
-                    {
-                        "id": "oil",
-                        "model": {
-                            "dissolved_gas_ratio": 100,
-                            "fluid_type": "oil",
-                            "reference_gas_mw": 20,
-                            "reference_oil_density": 850,
-                            "salinity": 30000
-                        },
-                        "model_type": "black_oil"
-                    }
-                ],
-                "format": "model",
-                "sources": []
-            },
-            "path": {
-                "edges": [
-                    {
-                        "edge_id": "flowline"
-                    },
-                    {
-                        "edge_id": "riser"
-                    }
-                ],
-                "select": "edges"
-            },
+                }
+            ],
             "results": {
                 "cell_stride": 4,
                 "detail": "profiles",
@@ -384,20 +434,38 @@ Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the 
             },
             "schedule": [
                 {
-                    "at": 0.5,
+                    "at": 20.0,
                     "set": {}
                 },
                 {
-                    "at": 0.5,
+                    "at": 20.0,
                     "set": {
-                        "outlet_pressure": 3.0
+                        "source": {
+                            "fixed_rate": 0.533
+                        }
                     }
                 }
             ],
+            "sink": {
+                "node_type": "fixed_pressure_sink",
+                "source_sink_data": {
+                    "boundary_pressure": 2.0
+                }
+            },
+            "source": {
+                "node_type": "fixed_rate_source",
+                "source_sink_data": {
+                    "dissolved_gas_ratio": 125.0,
+                    "fixed_rate": 0.8,
+                    "fluid_id": "oil",
+                    "inlet_temperature": 330.0,
+                    "water_cut": 20.0
+                }
+            },
             "time": {
                 "record_interval_s": 60.0,
-                "total": 1.0,
-                "unit": "hours"
+                "total": 30.0,
+                "unit": "minutes"
             }
         },
     )
@@ -412,123 +480,50 @@ Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the 
     const gs = new GraphSolve();
     const response = await gs.run_transient_flux({
         "transient_json": {
-            "boundary": {
-                "gas_rate": 100.0,
-                "inlet_temperature": 330.0,
-                "oil_rate": 0.8,
-                "outlet_pressure": 2.0,
-                "water_rate": 0.2
-            },
             "discretisation": {
                 "max_cell_length": 100.0
             },
-            "network_payload": {
-                "elements": [
-                    {
-                        "data": {
-                            "id": "well",
-                            "node_type": "fixed_rate_source",
-                            "source_sink_data": {
-                                "dissolved_gas_ratio": 125,
-                                "fixed_rate": 0.8,
-                                "fluid_id": "oil",
-                                "inlet_temperature": 330,
-                                "water_cut": 20
-                            }
-                        },
-                        "group": "nodes"
+            "fluids": [
+                {
+                    "id": "oil",
+                    "model": {
+                        "dissolved_gas_ratio": 100.0,
+                        "fluid_type": "oil",
+                        "reference_gas_mw": 20.0,
+                        "reference_oil_density": 850.0,
+                        "salinity": 30000.0
                     },
-                    {
-                        "data": {
-                            "id": "riser-base",
-                            "node_type": "network_node"
-                        },
-                        "group": "nodes"
-                    },
-                    {
-                        "data": {
-                            "id": "topside",
-                            "node_type": "fixed_pressure_sink",
-                            "source_sink_data": {
-                                "boundary_pressure": 2.0
-                            }
-                        },
-                        "group": "nodes"
-                    },
-                    {
-                        "data": {
-                            "edge_type": "pipe",
-                            "id": "flowline",
-                            "pipe_data": {
-                                "correlation": "Beggs-Brill",
-                                "pipe_geometry": [
-                                    {
-                                        "heat_transfer_coefficient": 20,
-                                        "pipe_angle": 92,
-                                        "pipe_diameter": 0.15,
-                                        "pipe_length": 1500,
-                                        "pipe_roughness": 4.6e-05,
-                                        "segment_type": "pipe",
-                                        "surrounding_temperature": 279
-                                    }
-                                ]
+                    "model_type": "black_oil"
+                }
+            ],
+            "line": [
+                {
+                    "edge_type": "pipe",
+                    "pipe_data": {
+                        "correlation": "Beggs-Brill",
+                        "pipe_geometry": [
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 0.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 300.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 285.0
                             },
-                            "source": "well",
-                            "target": "riser-base"
-                        },
-                        "group": "edges"
-                    },
-                    {
-                        "data": {
-                            "edge_type": "pipe",
-                            "id": "riser",
-                            "pipe_data": {
-                                "correlation": "Beggs-Brill",
-                                "pipe_geometry": [
-                                    {
-                                        "heat_transfer_coefficient": 20,
-                                        "pipe_angle": 0,
-                                        "pipe_diameter": 0.15,
-                                        "pipe_length": 300,
-                                        "pipe_roughness": 4.6e-05,
-                                        "segment_type": "pipe",
-                                        "surrounding_temperature": 285
-                                    }
-                                ]
-                            },
-                            "source": "riser-base",
-                            "target": "topside"
-                        },
-                        "group": "edges"
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 92.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 1500.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 279.0
+                            }
+                        ]
                     }
-                ],
-                "fluids": [
-                    {
-                        "id": "oil",
-                        "model": {
-                            "dissolved_gas_ratio": 100,
-                            "fluid_type": "oil",
-                            "reference_gas_mw": 20,
-                            "reference_oil_density": 850,
-                            "salinity": 30000
-                        },
-                        "model_type": "black_oil"
-                    }
-                ],
-                "format": "model",
-                "sources": []
-            },
-            "path": {
-                "edges": [
-                    {
-                        "edge_id": "flowline"
-                    },
-                    {
-                        "edge_id": "riser"
-                    }
-                ],
-                "select": "edges"
-            },
+                }
+            ],
             "results": {
                 "cell_stride": 4,
                 "detail": "profiles",
@@ -536,20 +531,38 @@ Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the 
             },
             "schedule": [
                 {
-                    "at": 0.5,
+                    "at": 20.0,
                     "set": {}
                 },
                 {
-                    "at": 0.5,
+                    "at": 20.0,
                     "set": {
-                        "outlet_pressure": 3.0
+                        "source": {
+                            "fixed_rate": 0.533
+                        }
                     }
                 }
             ],
+            "sink": {
+                "node_type": "fixed_pressure_sink",
+                "source_sink_data": {
+                    "boundary_pressure": 2.0
+                }
+            },
+            "source": {
+                "node_type": "fixed_rate_source",
+                "source_sink_data": {
+                    "dissolved_gas_ratio": 125.0,
+                    "fixed_rate": 0.8,
+                    "fluid_id": "oil",
+                    "inlet_temperature": 330.0,
+                    "water_cut": 20.0
+                }
+            },
             "time": {
                 "record_interval_s": 60.0,
-                "total": 1.0,
-                "unit": "hours"
+                "total": 30.0,
+                "unit": "minutes"
             }
         }
     });
@@ -566,123 +579,50 @@ Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the 
     let response = gs
         .call("run_transient_flux", &json!({
             "transient_json": {
-                "boundary": {
-                    "gas_rate": 100.0,
-                    "inlet_temperature": 330.0,
-                    "oil_rate": 0.8,
-                    "outlet_pressure": 2.0,
-                    "water_rate": 0.2
-                },
                 "discretisation": {
                     "max_cell_length": 100.0
                 },
-                "network_payload": {
-                    "elements": [
-                        {
-                            "data": {
-                                "id": "well",
-                                "node_type": "fixed_rate_source",
-                                "source_sink_data": {
-                                    "dissolved_gas_ratio": 125,
-                                    "fixed_rate": 0.8,
-                                    "fluid_id": "oil",
-                                    "inlet_temperature": 330,
-                                    "water_cut": 20
-                                }
-                            },
-                            "group": "nodes"
+                "fluids": [
+                    {
+                        "id": "oil",
+                        "model": {
+                            "dissolved_gas_ratio": 100.0,
+                            "fluid_type": "oil",
+                            "reference_gas_mw": 20.0,
+                            "reference_oil_density": 850.0,
+                            "salinity": 30000.0
                         },
-                        {
-                            "data": {
-                                "id": "riser-base",
-                                "node_type": "network_node"
-                            },
-                            "group": "nodes"
-                        },
-                        {
-                            "data": {
-                                "id": "topside",
-                                "node_type": "fixed_pressure_sink",
-                                "source_sink_data": {
-                                    "boundary_pressure": 2.0
-                                }
-                            },
-                            "group": "nodes"
-                        },
-                        {
-                            "data": {
-                                "edge_type": "pipe",
-                                "id": "flowline",
-                                "pipe_data": {
-                                    "correlation": "Beggs-Brill",
-                                    "pipe_geometry": [
-                                        {
-                                            "heat_transfer_coefficient": 20,
-                                            "pipe_angle": 92,
-                                            "pipe_diameter": 0.15,
-                                            "pipe_length": 1500,
-                                            "pipe_roughness": 4.6e-05,
-                                            "segment_type": "pipe",
-                                            "surrounding_temperature": 279
-                                        }
-                                    ]
+                        "model_type": "black_oil"
+                    }
+                ],
+                "line": [
+                    {
+                        "edge_type": "pipe",
+                        "pipe_data": {
+                            "correlation": "Beggs-Brill",
+                            "pipe_geometry": [
+                                {
+                                    "heat_transfer_coefficient": 20.0,
+                                    "pipe_angle": 0.0,
+                                    "pipe_diameter": 0.15,
+                                    "pipe_length": 300.0,
+                                    "pipe_roughness": 4.6e-05,
+                                    "segment_type": "pipe",
+                                    "surrounding_temperature": 285.0
                                 },
-                                "source": "well",
-                                "target": "riser-base"
-                            },
-                            "group": "edges"
-                        },
-                        {
-                            "data": {
-                                "edge_type": "pipe",
-                                "id": "riser",
-                                "pipe_data": {
-                                    "correlation": "Beggs-Brill",
-                                    "pipe_geometry": [
-                                        {
-                                            "heat_transfer_coefficient": 20,
-                                            "pipe_angle": 0,
-                                            "pipe_diameter": 0.15,
-                                            "pipe_length": 300,
-                                            "pipe_roughness": 4.6e-05,
-                                            "segment_type": "pipe",
-                                            "surrounding_temperature": 285
-                                        }
-                                    ]
-                                },
-                                "source": "riser-base",
-                                "target": "topside"
-                            },
-                            "group": "edges"
+                                {
+                                    "heat_transfer_coefficient": 20.0,
+                                    "pipe_angle": 92.0,
+                                    "pipe_diameter": 0.15,
+                                    "pipe_length": 1500.0,
+                                    "pipe_roughness": 4.6e-05,
+                                    "segment_type": "pipe",
+                                    "surrounding_temperature": 279.0
+                                }
+                            ]
                         }
-                    ],
-                    "fluids": [
-                        {
-                            "id": "oil",
-                            "model": {
-                                "dissolved_gas_ratio": 100,
-                                "fluid_type": "oil",
-                                "reference_gas_mw": 20,
-                                "reference_oil_density": 850,
-                                "salinity": 30000
-                            },
-                            "model_type": "black_oil"
-                        }
-                    ],
-                    "format": "model",
-                    "sources": []
-                },
-                "path": {
-                    "edges": [
-                        {
-                            "edge_id": "flowline"
-                        },
-                        {
-                            "edge_id": "riser"
-                        }
-                    ],
-                    "select": "edges"
-                },
+                    }
+                ],
                 "results": {
                     "cell_stride": 4,
                     "detail": "profiles",
@@ -690,20 +630,38 @@ Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-Flux): the 
                 },
                 "schedule": [
                     {
-                        "at": 0.5,
+                        "at": 20.0,
                         "set": {}
                     },
                     {
-                        "at": 0.5,
+                        "at": 20.0,
                         "set": {
-                            "outlet_pressure": 3.0
+                            "source": {
+                                "fixed_rate": 0.533
+                            }
                         }
                     }
                 ],
+                "sink": {
+                    "node_type": "fixed_pressure_sink",
+                    "source_sink_data": {
+                        "boundary_pressure": 2.0
+                    }
+                },
+                "source": {
+                    "node_type": "fixed_rate_source",
+                    "source_sink_data": {
+                        "dissolved_gas_ratio": 125.0,
+                        "fixed_rate": 0.8,
+                        "fluid_id": "oil",
+                        "inlet_temperature": 330.0,
+                        "water_cut": 20.0
+                    }
+                },
                 "time": {
                     "record_interval_s": 60.0,
-                    "total": 1.0,
-                    "unit": "hours"
+                    "total": 30.0,
+                    "unit": "minutes"
                 }
             }
         }))
@@ -723,9 +681,9 @@ Transient multiphase pipe flow, explicit Godunov/Rusanov drift flux (Graphsolve-
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `transient_json` | object or array of object or string | yes | Transient request, as a JSON object or a JSON string. Pressure MPa, rates kSm3/day at standard conditions, temperature K, lengths m. Pipe and fluid, in one of two forms: - Network: `network_payload` (a model-format network: `format`, `elements`, `fluids`, `sources`) and `path`: `{"select": "edges", "edges": [{"edge_id": "<id>"}, ...]}`, the pipe edges of one route listed INLET FIRST. They are joined in that order and not checked for continuity; each keeps its drawn direction (`source` upstream) and lays out its `pipe_geometry` segments from `source` to `target` in the order given (survey stations by measured depth). Only the geometry and the fluid are read from the network: the fluid named by the first edge's source node, or the only fluid. Annulus and zero-length restriction segments are not represented. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network fluid entry `{id, model_type, model}`. A segment has `pipe_length` m, `pipe_diameter` m and `pipe_angle` in degrees from vertical along the flow (0 flowing up, 90 horizontal, 180 flowing down), and optionally `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this segment only), and `surrounding_temperature` K with `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange). Black-oil and table fluids are read from `reference_oil_density`, `dissolved_gas_ratio`, `reference_gas_mw` and `salinity` only, through a fixed black-oil correlation set; `fluid_type`, correlation choices and `pvt_table` are ignored. An equation-of-state fluid is tabulated over (P, T) first. `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`; default `hours`), and `record_interval_s`, the recording interval in seconds whatever the unit (default 30). `boundary`, the state at t = 0: `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the total gas, dissolved included, and an omitted rate is 0; `inlet_temperature` K; `water_salinity` ppm of the water entering; and `outlet`: `{"type": "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area": <m2>, "cd": <default 0.84>}`. `outlet_pressure`, `inlet_temperature` and a non-zero rate are required in both forms; nothing is taken from the network's nodes. The run starts from the steady state of this boundary, and Graphsolve-Flux needs a `pressure` outlet at t = 0. `schedule`: `[{"at": <time in time.unit>, "set": {<boundary fields>}}]`. Fields not set carry forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the previous event (t = 0 counts as one), so a lone event at 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` not given at t = 0 applies from the previous event instead. `inlet_temperature`, choke `cd` and the outlet `type` step at the event. For a step in a ramped value, add an event with an empty `set` at the same `at`, listed first. The outlet and the inlet rates are the only valve controls: close the outlet for a valve slam, set the rates to 0 for a shut-in. `results`: `detail` is `summary` (default: pressure, gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles` (the `variables` listed, default those three, at every `cell_stride`-th cell plus both ends, or at the `cells` listed by index from 0 at the outlet) or `full` (every variable the scheme carries, every cell; `variables`, `cell_stride` and `cells` are ignored). Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor, sound_speed. Responses over about two million values are refused. `discretisation`: `max_cell_length` m (default 50). `pvt`, for an equation-of-state fluid only: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and boundary when omitted; outside them properties are held at the edge) and `pressure_nodes` (default 240) and `temperature_nodes` (default 24). The table's water is fresh water; `salinity_ppm` does not change it. Each scheme holds its cells in a pressure window and clamps anything outside it: Flux 0.5-15 MPa (and 250-450 K), Wave 0.01-50 MPa, Field 0.05-100 MPa. Solver options cannot be set. `solver` is set from the tool. The result is `stats` (cells, length_m, simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with `values[sample * n_cells + cell]`. |
+| `transient_json` | object or array of object or string | yes | Transient request, as a JSON object or a JSON string. Pressure MPa, rates kSm3/day at standard conditions, temperature K, lengths m. Pipe and fluid, in one of three forms: - Line: `fluids` (network fluid entries), a `source` node, a `line` of edges listed INLET FIRST and a `sink` node, each block in the network solver's schema. `source` is `{"node_type": "fixed_rate_source", "source_sink_data": {...}}` (its `fixed_rate`, cuts or `phase_rates` split as a network solve splits them; `inlet_temperature`) or a `pressure_dependent_source` with `inflow`, an engine inflow model (`"table"` with `ipr_table` taken point for point, the points' temperatures unused; any other model tabulated). Each `line` edge is `{"edge_type": "pipe", "pipe_data": {...}}`, its `pipe_geometry` from the edge's target end, with `injection` calculation points as gas-lift points at their measured depth; a `choke` edge with `choke_data` may close the line as the outlet choke. `sink` is a `fixed_pressure_sink` whose `boundary_pressure` is the outlet pressure. Field, Flux and Wave all take it, except that only Field takes a well inflow or gas lift, and Flux needs a pressure outlet at t = 0. - Network: `network_payload` (a model-format network: `format`, `elements`, `fluids`, `sources`) and `path`: `{"select": "edges", "edges": [{"edge_id": "<id>"}, ...]}`, the pipe edges of one route listed INLET FIRST. They are joined in that order and not checked for continuity; each keeps its drawn direction (`source` upstream) with its `pipe_geometry` laid out as a network solve lays it, from the `target` end to the `source` end, the inlet at the last listed segment (survey stations by measured depth). Only the geometry and the fluid are read from the network: the fluid named by the first edge's source node, or the only fluid. An annulus or a restriction segment is refused. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network fluid entry `{id, model_type, model}`. A segment has `pipe_length` m, `pipe_diameter` m and `pipe_angle` in degrees from vertical along the flow (0 flowing up, 90 horizontal, 180 flowing down), and optionally `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this segment only), and `surrounding_temperature` K with `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange). Every fluid is baked once into a (P, T) table from the engine's own fluid model: a black-oil or table fluid's `fluid_type`, correlation choices, `pvt_table` and `salinity` are honoured (`reference_oil_density` and `reference_gas_mw` are required), an equation-of-state fluid's water takes `pvt.salinity_ppm`. `flow_model` (optional): omitted, every scheme runs the TRICKLE three-phase structure; `trickle` runs TRICKLE with the water on its own velocity (Field: its own field and momentum row, and `oil_holdup`, `water_holdup`, `oil_velocity`, `water_velocity` returned); `goat` runs GOAT's two-fluid closure on one lumped liquid through the same structure; `tfs` Wave's two-fluid friction at the boundary rates with the drift-flux gas velocity (Wave only; Flux and Field refuse it). `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`; default `hours`), and `record_interval_s`, the recording interval in seconds whatever the unit (default 30). `boundary`, the state at t = 0: `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the total gas, dissolved included, and an omitted rate is 0; `inlet_temperature` K; `water_salinity` ppm of the water entering; and `outlet`: `{"type": "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area": <m2>, "cd": <default 0.84>}`. In the network and bare forms `outlet_pressure`, `inlet_temperature` and a non-zero rate are required; nothing is taken from the network's nodes. In the line form the nodes give them: `boundary` then adds the outlet type, `water_salinity` and `lift_gas_rate`, and may give the pressure or temperature only where the nodes do not; a line's rates are always its source's. The run starts from the steady state of this boundary, and Graphsolve-Flux needs a `pressure` outlet at t = 0. `schedule`: `[{"at": <time in time.unit>, "set": {<boundary fields>}}]`. Fields not set carry forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the previous event (t = 0 counts as one), so a lone event at 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` first given at a later event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd` and the outlet `type` step at the event. For a step in a ramped value, add an event with an empty `set` at the same `at`, listed first. The outlet and the inlet rates are the only valve controls: close the outlet for a valve slam, set the rates to 0 for a shut-in. In the line form a `set` takes `source` (fields of `source_sink_data`, carried forward and split again) and `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`. `results`: `detail` is `summary` (default: pressure, gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles` (the `variables` listed, default those three, at every `cell_stride`-th cell plus both ends, or at the `cells` listed by index from 0 at the outlet) or `full` (every variable the scheme carries, every cell; `variables`, `cell_stride` and `cells` are ignored). Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor, sound_speed, oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about two million values are refused. `discretisation`: `max_cell_length` m (default 50). `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted; the schemes hold their states inside the box, so widen it for a run that may leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36) and, for an equation-of-state fluid, `salinity_ppm` of its water. `gas_transfer`: how gas moves between solution and the free phase, `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"` or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once and never dissolves again. Field and Flux take any setting (Field takes `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is set, the steady state the run starts from holds the oil at saturation. `slug_capturing`: true (Field only, default false) runs the closure's separated flow alone, so slugs form on the grid as cells that fill with liquid; it needs cells of the order of the pipe diameter. `steps`: Field takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its CFL limit and it refuses `steps`. `equipment` (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`, `{"type": "table", "points": [{"pressure", "oil_rate", "gas_rate", "water_rate"}]}` (MPa, kSm3/day; the highest pressure is where it stops; above it the reservoir takes fluid back along the last segment) or `{"type": "inflow_model", "inflow": <engine inflow input with its fluid>, "points": <default 60>}`, the inlet rates then following the inlet pressure and the boundary's rates ignored; `gas_lift`, `[{"distance_from_inlet" m, "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}]` supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into the tubing or, with a valve, into the annulus, which passes it one way and chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas": {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"}, "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas, annulus pressures and the separator's pressure, level and outflows. Every scheme works inside the pressure and temperature box its fluid was baked over: Wave clamps a cell to it, Flux refuses a step that would leave it and retries shorter (a step accepted at the shortest length is counted in `failed_steps`), and Field treats a state outside it as a failed step. Solver options other than `flow_model`, `steps`, `gas_transfer`, `slug_capturing` and `equipment` cannot be set. `solver` is set from the tool. Graphsolve-Field also takes a network (gathering and splitting, one outlet or several, `boundary.outlets`): `network_payload` with `network.branches` (each `{name, path}`), or bare `branches` (each `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`). The result is `stats` (cells, length_m, simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with `values[sample * n_cells + cell]`. |
 
-### Example: a short run on a bare pipe
+### Example: a line in the network solver's terms
 
 === "Python"
 
@@ -735,47 +693,88 @@ Transient multiphase pipe flow, explicit Godunov/Rusanov drift flux (Graphsolve-
     gs = GraphSolve()
     response = gs.run_transient_wave(
         transient_json={
-            "boundary": {
-                "gas_rate": 60.0,
-                "inlet_temperature": 323.15,
-                "oil_rate": 0.5,
-                "outlet_pressure": 2.0,
-                "water_rate": 0.1
-            },
             "discretisation": {
-                "max_cell_length": 50.0
+                "max_cell_length": 100.0
             },
-            "fluid": {
-                "id": "f1",
-                "model": {
-                    "dissolved_gas_ratio": 120.0,
-                    "fluid_type": "oil",
-                    "reference_gas_mw": 20.0,
-                    "reference_oil_density": 850.0,
-                    "salinity": 30000.0
-                },
-                "model_type": "black_oil"
-            },
-            "results": {
-                "detail": "summary"
-            },
-            "segments": [
+            "fluids": [
                 {
-                    "heat_transfer_coefficient": 25.0,
-                    "pipe_angle": 90.0,
-                    "pipe_diameter": 0.2,
-                    "pipe_length": 200.0,
-                    "surrounding_temperature": 279.0
-                },
-                {
-                    "pipe_angle": 0.0,
-                    "pipe_diameter": 0.2,
-                    "pipe_length": 100.0
+                    "id": "oil",
+                    "model": {
+                        "dissolved_gas_ratio": 100.0,
+                        "fluid_type": "oil",
+                        "reference_gas_mw": 20.0,
+                        "reference_oil_density": 850.0,
+                        "salinity": 30000.0
+                    },
+                    "model_type": "black_oil"
                 }
             ],
+            "line": [
+                {
+                    "edge_type": "pipe",
+                    "pipe_data": {
+                        "correlation": "Beggs-Brill",
+                        "pipe_geometry": [
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 0.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 300.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 285.0
+                            },
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 92.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 1500.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 279.0
+                            }
+                        ]
+                    }
+                }
+            ],
+            "results": {
+                "cell_stride": 4,
+                "detail": "profiles",
+                "variables": ["pressure", "gas_fraction"]
+            },
+            "schedule": [
+                {
+                    "at": 20.0,
+                    "set": {}
+                },
+                {
+                    "at": 20.0,
+                    "set": {
+                        "source": {
+                            "fixed_rate": 0.533
+                        }
+                    }
+                }
+            ],
+            "sink": {
+                "node_type": "fixed_pressure_sink",
+                "source_sink_data": {
+                    "boundary_pressure": 2.0
+                }
+            },
+            "source": {
+                "node_type": "fixed_rate_source",
+                "source_sink_data": {
+                    "dissolved_gas_ratio": 125.0,
+                    "fixed_rate": 0.8,
+                    "fluid_id": "oil",
+                    "inlet_temperature": 330.0,
+                    "water_cut": 20.0
+                }
+            },
             "time": {
-                "record_interval_s": 15.0,
-                "total": 2.0,
+                "record_interval_s": 60.0,
+                "total": 30.0,
                 "unit": "minutes"
             }
         },
@@ -791,47 +790,88 @@ Transient multiphase pipe flow, explicit Godunov/Rusanov drift flux (Graphsolve-
     const gs = new GraphSolve();
     const response = await gs.run_transient_wave({
         "transient_json": {
-            "boundary": {
-                "gas_rate": 60.0,
-                "inlet_temperature": 323.15,
-                "oil_rate": 0.5,
-                "outlet_pressure": 2.0,
-                "water_rate": 0.1
-            },
             "discretisation": {
-                "max_cell_length": 50.0
+                "max_cell_length": 100.0
             },
-            "fluid": {
-                "id": "f1",
-                "model": {
-                    "dissolved_gas_ratio": 120.0,
-                    "fluid_type": "oil",
-                    "reference_gas_mw": 20.0,
-                    "reference_oil_density": 850.0,
-                    "salinity": 30000.0
-                },
-                "model_type": "black_oil"
-            },
-            "results": {
-                "detail": "summary"
-            },
-            "segments": [
+            "fluids": [
                 {
-                    "heat_transfer_coefficient": 25.0,
-                    "pipe_angle": 90.0,
-                    "pipe_diameter": 0.2,
-                    "pipe_length": 200.0,
-                    "surrounding_temperature": 279.0
-                },
-                {
-                    "pipe_angle": 0.0,
-                    "pipe_diameter": 0.2,
-                    "pipe_length": 100.0
+                    "id": "oil",
+                    "model": {
+                        "dissolved_gas_ratio": 100.0,
+                        "fluid_type": "oil",
+                        "reference_gas_mw": 20.0,
+                        "reference_oil_density": 850.0,
+                        "salinity": 30000.0
+                    },
+                    "model_type": "black_oil"
                 }
             ],
+            "line": [
+                {
+                    "edge_type": "pipe",
+                    "pipe_data": {
+                        "correlation": "Beggs-Brill",
+                        "pipe_geometry": [
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 0.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 300.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 285.0
+                            },
+                            {
+                                "heat_transfer_coefficient": 20.0,
+                                "pipe_angle": 92.0,
+                                "pipe_diameter": 0.15,
+                                "pipe_length": 1500.0,
+                                "pipe_roughness": 4.6e-05,
+                                "segment_type": "pipe",
+                                "surrounding_temperature": 279.0
+                            }
+                        ]
+                    }
+                }
+            ],
+            "results": {
+                "cell_stride": 4,
+                "detail": "profiles",
+                "variables": ["pressure", "gas_fraction"]
+            },
+            "schedule": [
+                {
+                    "at": 20.0,
+                    "set": {}
+                },
+                {
+                    "at": 20.0,
+                    "set": {
+                        "source": {
+                            "fixed_rate": 0.533
+                        }
+                    }
+                }
+            ],
+            "sink": {
+                "node_type": "fixed_pressure_sink",
+                "source_sink_data": {
+                    "boundary_pressure": 2.0
+                }
+            },
+            "source": {
+                "node_type": "fixed_rate_source",
+                "source_sink_data": {
+                    "dissolved_gas_ratio": 125.0,
+                    "fixed_rate": 0.8,
+                    "fluid_id": "oil",
+                    "inlet_temperature": 330.0,
+                    "water_cut": 20.0
+                }
+            },
             "time": {
-                "record_interval_s": 15.0,
-                "total": 2.0,
+                "record_interval_s": 60.0,
+                "total": 30.0,
                 "unit": "minutes"
             }
         }
@@ -849,47 +889,88 @@ Transient multiphase pipe flow, explicit Godunov/Rusanov drift flux (Graphsolve-
     let response = gs
         .call("run_transient_wave", &json!({
             "transient_json": {
-                "boundary": {
-                    "gas_rate": 60.0,
-                    "inlet_temperature": 323.15,
-                    "oil_rate": 0.5,
-                    "outlet_pressure": 2.0,
-                    "water_rate": 0.1
-                },
                 "discretisation": {
-                    "max_cell_length": 50.0
+                    "max_cell_length": 100.0
                 },
-                "fluid": {
-                    "id": "f1",
-                    "model": {
-                        "dissolved_gas_ratio": 120.0,
-                        "fluid_type": "oil",
-                        "reference_gas_mw": 20.0,
-                        "reference_oil_density": 850.0,
-                        "salinity": 30000.0
-                    },
-                    "model_type": "black_oil"
-                },
-                "results": {
-                    "detail": "summary"
-                },
-                "segments": [
+                "fluids": [
                     {
-                        "heat_transfer_coefficient": 25.0,
-                        "pipe_angle": 90.0,
-                        "pipe_diameter": 0.2,
-                        "pipe_length": 200.0,
-                        "surrounding_temperature": 279.0
-                    },
-                    {
-                        "pipe_angle": 0.0,
-                        "pipe_diameter": 0.2,
-                        "pipe_length": 100.0
+                        "id": "oil",
+                        "model": {
+                            "dissolved_gas_ratio": 100.0,
+                            "fluid_type": "oil",
+                            "reference_gas_mw": 20.0,
+                            "reference_oil_density": 850.0,
+                            "salinity": 30000.0
+                        },
+                        "model_type": "black_oil"
                     }
                 ],
+                "line": [
+                    {
+                        "edge_type": "pipe",
+                        "pipe_data": {
+                            "correlation": "Beggs-Brill",
+                            "pipe_geometry": [
+                                {
+                                    "heat_transfer_coefficient": 20.0,
+                                    "pipe_angle": 0.0,
+                                    "pipe_diameter": 0.15,
+                                    "pipe_length": 300.0,
+                                    "pipe_roughness": 4.6e-05,
+                                    "segment_type": "pipe",
+                                    "surrounding_temperature": 285.0
+                                },
+                                {
+                                    "heat_transfer_coefficient": 20.0,
+                                    "pipe_angle": 92.0,
+                                    "pipe_diameter": 0.15,
+                                    "pipe_length": 1500.0,
+                                    "pipe_roughness": 4.6e-05,
+                                    "segment_type": "pipe",
+                                    "surrounding_temperature": 279.0
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "results": {
+                    "cell_stride": 4,
+                    "detail": "profiles",
+                    "variables": ["pressure", "gas_fraction"]
+                },
+                "schedule": [
+                    {
+                        "at": 20.0,
+                        "set": {}
+                    },
+                    {
+                        "at": 20.0,
+                        "set": {
+                            "source": {
+                                "fixed_rate": 0.533
+                            }
+                        }
+                    }
+                ],
+                "sink": {
+                    "node_type": "fixed_pressure_sink",
+                    "source_sink_data": {
+                        "boundary_pressure": 2.0
+                    }
+                },
+                "source": {
+                    "node_type": "fixed_rate_source",
+                    "source_sink_data": {
+                        "dissolved_gas_ratio": 125.0,
+                        "fixed_rate": 0.8,
+                        "fluid_id": "oil",
+                        "inlet_temperature": 330.0,
+                        "water_cut": 20.0
+                    }
+                },
                 "time": {
-                    "record_interval_s": 15.0,
-                    "total": 2.0,
+                    "record_interval_s": 60.0,
+                    "total": 30.0,
                     "unit": "minutes"
                 }
             }
