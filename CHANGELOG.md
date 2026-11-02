@@ -82,8 +82,8 @@ Each release lists its changes under these headings:
 - Transient runs: the fixed pressure windows are gone. Each scheme now works
   inside the pressure and temperature range of its fluid table (`pvt`). Wave
   clamps a cell to that range, Flux retries a step that would leave it, and
-  Field counts it as a failed step. Widen `pvt` for a run that may leave the
-  range. The default `pvt.temperature_nodes` is now 36 (was 24).
+  Field continues the properties from the range's edge. Widen `pvt` for a run
+  that may leave the range. The default `pvt.temperature_nodes` is now 36 (was 24).
 - Transient runs: a `water_salinity` first given at a later event now ramps
   from the fluid's own salinity.
 - `run_forecast`: a `max_iter` or `tolerance` in `solver_settings` now
@@ -107,6 +107,13 @@ Each release lists its changes under these headings:
   without a wildcard arm needs one more arm. `CalculateWaterPropertiesParams`
   has two new `Option` fields. A struct literal without
   `..Default::default()` must set them.
+
+### Docs
+
+- A guide, *Transient runs and flow stability*: which transient scheme to
+  use, and how to read `trickle_detail`'s stability flags as a five-step
+  screen (Steady, Watch, Mechanism, Act) with the evidence behind it.
+- `examples/basics/06_flow_stability.py` runs that screen at one point.
 
 ## 1.0.42 — 2026-10-08
 
