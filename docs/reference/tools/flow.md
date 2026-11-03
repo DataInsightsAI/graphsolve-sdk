@@ -89,6 +89,121 @@ Multiphase pressure gradient at one point in a pipe using a chosen correlation. 
     println!("{:?}", response.result);
     ```
 
+## `calculate_trickle_inputs`
+
+The in-situ inputs trickle_detail reads at one point (densities, viscosities, tensions, superficial velocities) from standard rates, pressure, temperature, diameter and a black-oil, table or equation-of-state fluid.
+
+**Price:** Costs 1 credit.
+
+**In each client:** [Python](../python.md#graphsolve.GraphSolve.calculate_trickle_inputs) · [TypeScript](../typescript/api/classes/GraphSolve.md#calculate_trickle_inputs) · [Rust](https://docs.rs/graphsolve/latest/graphsolve/struct.GraphSolve.html#method.calculate_trickle_inputs)
+
+### Parameters
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `angle` | number | no | Pipe angle from vertical in degrees in the flow direction (0=vertical upflow, 90=horizontal), passed through to the trickle_detail input |
+| `diameter` | number | yes | Pipe inner diameter in meters |
+| `fluid` | object | yes | The fluid: a network `fluids` entry ({id, model_type: black_oil \| table \| equation_of_state \| correlations, model}), as solve_network and the transient tools take it, or a bare black-oil model (the fields of calculate_fluid_properties.fluid_properties) |
+| `gas_rate` | number | no | Total gas rate in Sm3/day at standard conditions, dissolved and free. Omitted, the fluid's own GOR times `oil_rate` (a black-oil `dissolved_gas_ratio`, or the surface GOR of an equation-of-state composition); a table or correlations fluid needs it |
+| `oil_rate` | number | no | Oil (or condensate) rate in Sm3/day at standard conditions (default 0) |
+| `pressure` | number | yes | Pressure at the point in MPa |
+| `roughness` | number | no | Absolute pipe roughness in meters, passed through to the trickle_detail input |
+| `salinity` | number | no | Water salinity in ppm (default: a black-oil model's `salinity`, else fresh water; a correlations fluid carries its own) |
+| `temperature` | number | yes | Temperature at the point in K |
+| `water_rate` | number | no | Water rate in Sm3/day at standard conditions (default 0) |
+
+### Example: black-oil gas-lifted tubing point
+
+=== "Python"
+
+    ```python
+    from graphsolve import GraphSolve
+
+    gs = GraphSolve()
+    response = gs.calculate_trickle_inputs(
+        angle=0.0,
+        diameter=0.1,
+        fluid={
+            "model": {
+                "dissolved_gas_ratio": 100.0,
+                "fluid_type": "oil",
+                "reference_gas_mw": 20.0,
+                "reference_oil_density": 851.0,
+                "salinity": 50000.0
+            },
+            "model_type": "black_oil"
+        },
+        gas_rate=120000.0,
+        oil_rate=800.0,
+        pressure=8.0,
+        roughness=4.5e-05,
+        temperature=340.0,
+        water_rate=300.0,
+    )
+    print(response["result"])
+    ```
+
+=== "TypeScript"
+
+    ```ts
+    import { GraphSolve } from "@graphsolve/sdk";
+
+    const gs = new GraphSolve();
+    const response = await gs.calculate_trickle_inputs({
+        "angle": 0.0,
+        "diameter": 0.1,
+        "fluid": {
+            "model": {
+                "dissolved_gas_ratio": 100.0,
+                "fluid_type": "oil",
+                "reference_gas_mw": 20.0,
+                "reference_oil_density": 851.0,
+                "salinity": 50000.0
+            },
+            "model_type": "black_oil"
+        },
+        "gas_rate": 120000.0,
+        "oil_rate": 800.0,
+        "pressure": 8.0,
+        "roughness": 4.5e-05,
+        "temperature": 340.0,
+        "water_rate": 300.0
+    });
+    console.log(response.result);
+    ```
+
+=== "Rust"
+
+    ```rust
+    use graphsolve::GraphSolve;
+    use serde_json::json;
+
+    let gs = GraphSolve::new()?;
+    let response = gs
+        .call("calculate_trickle_inputs", &json!({
+            "angle": 0.0,
+            "diameter": 0.1,
+            "fluid": {
+                "model": {
+                    "dissolved_gas_ratio": 100.0,
+                    "fluid_type": "oil",
+                    "reference_gas_mw": 20.0,
+                    "reference_oil_density": 851.0,
+                    "salinity": 50000.0
+                },
+                "model_type": "black_oil"
+            },
+            "gas_rate": 120000.0,
+            "oil_rate": 800.0,
+            "pressure": 8.0,
+            "roughness": 4.5e-05,
+            "temperature": 340.0,
+            "water_rate": 300.0
+        }))
+        .await?;
+    println!("{:?}", response.result);
+    ```
+
 ## `compare_pressure_drop_correlations`
 
 Run every multiphase pressure-drop correlation (or a subset) on one segment and compare the predicted gradients.

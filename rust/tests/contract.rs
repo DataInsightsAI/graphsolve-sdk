@@ -738,7 +738,7 @@ fn every_tool_in_the_spec_is_named() {
         .map(|(_, item)| item["post"]["operationId"].as_str().unwrap())
         .collect();
 
-    assert_eq!(tools.len(), 102);
+    assert_eq!(tools.len(), 103);
     for tool in tools {
         assert!(TOOL_NAMES.contains(&tool), "{tool} has no method");
     }

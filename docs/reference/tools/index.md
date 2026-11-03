@@ -2,7 +2,7 @@
 
 # Tool reference
 
-Every tool the API offers, generated from the API specification (engine 1.0.49). Each tool is `POST /v1/tools/{name}`, and each client has a method of the same name.
+Every tool the API offers, generated from the API specification (engine 1.0.50). Each tool is `POST /v1/tools/{name}`, and each client has a method of the same name.
 
 | Tool | Domain | What it does | Price |
 |---|---|---|---|
@@ -24,6 +24,7 @@ Every tool the API offers, generated from the API specification (engine 1.0.49).
 | [`transient_bhp_history`](inflow.md#transient_bhp_history) | Inflow matching / transient | Compute the flowing-BHP history from a rate history (transient superposition). | Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute. |
 | [`transient_rate_history`](inflow.md#transient_rate_history) | Inflow matching / transient | Compute the rate history from a pressure history (transient superposition). | Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute. |
 | [`calculate_pressure_drop`](flow.md#calculate_pressure_drop) | Flow (pressure drop) | Multiphase pressure gradient at one point in a pipe using a chosen correlation. Returns gradient components, holdup, flow regime and hydraulics. | Costs 1 credit. |
+| [`calculate_trickle_inputs`](flow.md#calculate_trickle_inputs) | Flow (pressure drop) | The in-situ inputs trickle_detail reads at one point (densities, viscosities, tensions, superficial velocities) from standard rates, pressure, temperature, diameter and a black-oil, table or equation-of-state fluid. | Costs 1 credit. |
 | [`compare_pressure_drop_correlations`](flow.md#compare_pressure_drop_correlations) | Flow (pressure drop) | Run every multiphase pressure-drop correlation (or a subset) on one segment and compare the predicted gradients. | Costs 3 credits. |
 | [`trickle_detail`](flow.md#trickle_detail) | Flow (pressure drop) | TRICKLE's three-phase flow structure at one point, as the transient solvers read it: regime weights, the nine fields, slug unit, cores, oil-water structure and the forces per phase and interface, with optional imposed states. | Costs 1 credit. |
 | [`calculate_choke_pressure_drop`](choke.md#calculate_choke_pressure_drop) | Chokes | Pressure drop across a choke of known diameter at given rates (Sachdeva multiphase model, critical/subcritical). | Costs 1 credit, plus 1 per 250 ms beyond the first 0.25 s of compute. |

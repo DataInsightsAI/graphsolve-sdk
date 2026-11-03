@@ -5,8 +5,8 @@
  * Run `python emit/emit_typescript.py` after a spec change; CI fails if
  * this file and the spec disagree.
  *
- * Engine API version: 1.0.49
- * Tools: 102
+ * Engine API version: 1.0.50
+ * Tools: 103
  */
 
 import type { ToolArguments, ToolResponse } from "./types.js";
@@ -47,6 +47,7 @@ export type ToolName =
   | "calculate_reid_vapour_pressure"
   | "calculate_saturation_pressure"
   | "calculate_screw_compressor"
+  | "calculate_trickle_inputs"
   | "calculate_turbine"
   | "calculate_turbo_machine"
   | "calculate_volumetrics"
@@ -617,6 +618,19 @@ export type CalculateScrewCompressorParams = {
   polytropic_efficiency?: number | null;
   subtype?: string | null;
   volumetric_efficiency?: number | null;
+};
+
+export type CalculateTrickleInputsParams = {
+  diameter: number;
+  fluid: unknown;
+  pressure: number;
+  temperature: number;
+  angle?: number | null;
+  gas_rate?: number | null;
+  oil_rate?: number | null;
+  roughness?: number | null;
+  salinity?: number | null;
+  water_rate?: number | null;
 };
 
 export type CalculateTurbineParams = {
@@ -1435,6 +1449,20 @@ export abstract class GeneratedMethods {
     params: CalculateScrewCompressorParams,
   ): Promise<ToolResponse> {
     return this.call("calculate_screw_compressor", params);
+  }
+
+  /**
+   * The in-situ inputs trickle_detail reads at one point (densities,
+   * viscosities, tensions, superficial velocities) from standard rates,
+   * pressure, temperature, diameter and a black-oil, table or equation-of-
+   * state fluid.
+   *
+   * Costs 1 credit.
+   */
+  calculate_trickle_inputs(
+    params: CalculateTrickleInputsParams,
+  ): Promise<ToolResponse> {
+    return this.call("calculate_trickle_inputs", params);
   }
 
   /**

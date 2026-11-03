@@ -4,8 +4,8 @@ GENERATED FROM spec/graphsolve-v1.json — DO NOT EDIT BY HAND.
 Run `python emit/emit_python.py` after a spec change; CI fails if this
 file and the spec disagree.
 
-Engine API version: 1.0.49
-Tools: 102
+Engine API version: 1.0.50
+Tools: 103
 """
 
 from __future__ import annotations
@@ -1083,6 +1083,43 @@ class GeneratedMethods:
                 polytropic_efficiency=polytropic_efficiency,
                 subtype=subtype,
                 volumetric_efficiency=volumetric_efficiency,
+            ),
+        )
+
+    def calculate_trickle_inputs(
+        self,
+        *,
+        diameter: float,
+        fluid: Any,
+        pressure: float,
+        temperature: float,
+        angle: float | None = None,
+        gas_rate: float | None = None,
+        oil_rate: float | None = None,
+        roughness: float | None = None,
+        salinity: float | None = None,
+        water_rate: float | None = None,
+    ) -> dict[str, Any]:
+        """The in-situ inputs trickle_detail reads at one point (densities,
+        viscosities, tensions, superficial velocities) from standard rates,
+        pressure, temperature, diameter and a black-oil, table or equation-of-
+        state fluid.
+
+        Costs 1 credit.
+        """
+        return self.call(
+            "calculate_trickle_inputs",
+            _present(
+                diameter=diameter,
+                fluid=fluid,
+                pressure=pressure,
+                temperature=temperature,
+                angle=angle,
+                gas_rate=gas_rate,
+                oil_rate=oil_rate,
+                roughness=roughness,
+                salinity=salinity,
+                water_rate=water_rate,
             ),
         )
 

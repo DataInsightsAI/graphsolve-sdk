@@ -4,15 +4,15 @@
 //! Run `python emit/emit_rust.py` after a spec change; CI fails if this
 //! file and the spec disagree.
 //!
-//! Engine API version: 1.0.49
-//! Tools: 102
+//! Engine API version: 1.0.50
+//! Tools: 103
 
 use serde::{Deserialize, Serialize};
 
 use crate::{GraphSolve, Result, ToolResponse};
 
 /// Every tool this client knows about, in the order the API lists them.
-pub const TOOL_NAMES: [&str; 102] = [
+pub const TOOL_NAMES: [&str; 103] = [
     "adjust_composition_to_gor",
     "adjust_composition_to_phase_ratio",
     "aggregate_type_well",
@@ -47,6 +47,7 @@ pub const TOOL_NAMES: [&str; 102] = [
     "calculate_reid_vapour_pressure",
     "calculate_saturation_pressure",
     "calculate_screw_compressor",
+    "calculate_trickle_inputs",
     "calculate_turbine",
     "calculate_turbo_machine",
     "calculate_volumetrics",
@@ -1520,6 +1521,46 @@ pub struct CalculateScrewCompressorParams {
     /// Volumetric efficiency (0-1, default: 0.85).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub volumetric_efficiency: Option<f64>,
+}
+
+/// Arguments for [`GraphSolve::calculate_trickle_inputs`](crate::GraphSolve::calculate_trickle_inputs).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CalculateTrickleInputsParams {
+    /// Pipe inner diameter in meters
+    pub diameter: f64,
+    /// The fluid: a network `fluids` entry ({id, model_type: black_oil | table |
+    /// equation_of_state | correlations, model}), as solve_network and the
+    /// transient tools take it, or a bare black-oil model (the fields of
+    /// calculate_fluid_properties.fluid_properties)
+    pub fluid: serde_json::Value,
+    /// Pressure at the point in MPa
+    pub pressure: f64,
+    /// Temperature at the point in K
+    pub temperature: f64,
+    /// Pipe angle from vertical in degrees in the flow direction (0=vertical
+    /// upflow, 90=horizontal), passed through to the trickle_detail input
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub angle: Option<f64>,
+    /// Total gas rate in Sm3/day at standard conditions, dissolved and free.
+    /// Omitted, the fluid's own GOR times `oil_rate` (a black-oil
+    /// `dissolved_gas_ratio`, or the surface GOR of an equation-of-state
+    /// composition); a table or correlations fluid needs it
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_rate: Option<f64>,
+    /// Oil (or condensate) rate in Sm3/day at standard conditions (default 0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oil_rate: Option<f64>,
+    /// Absolute pipe roughness in meters, passed through to the trickle_detail
+    /// input
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub roughness: Option<f64>,
+    /// Water salinity in ppm (default: a black-oil model's `salinity`, else fresh
+    /// water; a correlations fluid carries its own)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub salinity: Option<f64>,
+    /// Water rate in Sm3/day at standard conditions (default 0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub water_rate: Option<f64>,
 }
 
 /// Arguments for [`GraphSolve::calculate_turbine`](crate::GraphSolve::calculate_turbine).
@@ -3909,6 +3950,25 @@ impl GraphSolve {
         params: CalculateScrewCompressorParams,
     ) -> Result<ToolResponse> {
         self.call("calculate_screw_compressor", &params).await
+    }
+
+    /// The in-situ inputs trickle_detail reads at one point (densities,
+    /// viscosities, tensions, superficial velocities) from standard rates,
+    /// pressure, temperature, diameter and a black-oil, table or equation-of-
+    /// state fluid.
+    ///
+    /// Costs 1 credit.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::SolverDidNotConverge`](crate::Error::SolverDidNotConverge)
+    /// when the calculation ran and produced no answer, which is charged.
+    /// Every other variant means nothing was computed and nothing was billed.
+    pub async fn calculate_trickle_inputs(
+        &self,
+        params: CalculateTrickleInputsParams,
+    ) -> Result<ToolResponse> {
+        self.call("calculate_trickle_inputs", &params).await
     }
 
     /// Single-stage centrifugal turbine/expander: outlet P/T and power
