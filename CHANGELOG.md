@@ -117,6 +117,8 @@ Each release lists its changes under these headings:
 
 - `solve_network`: two separators feeding one header no longer fail with a
   singular system. Every separator outlet now flows out of its vessel.
+- **Python only:** `graphsolve.__version__` now reports the installed
+  version. It was stuck at `"1.0.0"`.
 
 ### Docs
 

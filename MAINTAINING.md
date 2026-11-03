@@ -159,7 +159,9 @@ It never needs read access to anything.
 
 **A client's major.minor is the engine API's; the patch is the client's own.** So
 any `1.2.x` client speaks engine `1.2`. `scripts/check_versions.py` checks this
-in CI against the spec's `info.version`.
+in CI against the spec's `info.version`, and checks that the Python
+package's `__version__` in `python/src/graphsolve/__init__.py` matches its
+`pyproject.toml`. Bump both together.
 
 The spec's version is the engine's own release version — the same number the
 engine's release workflow asserts against its git tag.
