@@ -4,8 +4,8 @@ GENERATED FROM spec/graphsolve-v1.json — DO NOT EDIT BY HAND.
 Run `python emit/emit_python.py` after a spec change; CI fails if this
 file and the spec disagree.
 
-Engine API version: 1.0.42
-Tools: 101
+Engine API version: 1.0.50
+Tools: 103
 """
 
 from __future__ import annotations
@@ -674,7 +674,7 @@ class GeneratedMethods:
         wellhead_pressure: float,
         wellhead_temperature: float,
         dissolved_gas_ratio: float | None = None,
-        flow_correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"] | None = None,
+        flow_correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME", "TRICKLE"] | None = None,
         gas_mw: float | None = None,
         oil_density: float | None = None,
         tubing_angle: float | None = None,
@@ -744,7 +744,7 @@ class GeneratedMethods:
         water_rate: float,
         dissolved_gas_ratio: float | None = None,
         flow_boundary: Literal["top", "bottom"] | None = None,
-        flow_correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"] | None = None,
+        flow_correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME", "TRICKLE"] | None = None,
         gas_mw: float | None = None,
         heat_transfer_coefficient: float | None = None,
         oil_density: float | None = None,
@@ -785,7 +785,7 @@ class GeneratedMethods:
         self,
         *,
         angle: float,
-        correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"],
+        correlation: Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME", "TRICKLE"],
         density: list[float],
         diameter: float,
         ift: float,
@@ -1086,6 +1086,43 @@ class GeneratedMethods:
             ),
         )
 
+    def calculate_trickle_inputs(
+        self,
+        *,
+        diameter: float,
+        fluid: Any,
+        pressure: float,
+        temperature: float,
+        angle: float | None = None,
+        gas_rate: float | None = None,
+        oil_rate: float | None = None,
+        roughness: float | None = None,
+        salinity: float | None = None,
+        water_rate: float | None = None,
+    ) -> dict[str, Any]:
+        """The in-situ inputs trickle_detail reads at one point (densities,
+        viscosities, tensions, superficial velocities) from standard rates,
+        pressure, temperature, diameter and a black-oil, table or equation-of-
+        state fluid.
+
+        Costs 1 credit.
+        """
+        return self.call(
+            "calculate_trickle_inputs",
+            _present(
+                diameter=diameter,
+                fluid=fluid,
+                pressure=pressure,
+                temperature=temperature,
+                angle=angle,
+                gas_rate=gas_rate,
+                oil_rate=oil_rate,
+                roughness=roughness,
+                salinity=salinity,
+                water_rate=water_rate,
+            ),
+        )
+
     def calculate_turbine(
         self,
         *,
@@ -1174,7 +1211,9 @@ class GeneratedMethods:
         *,
         pressure: float,
         temperature: float,
+        density_correlation: str | None = None,
         salinity: float | None = None,
+        viscosity_correlation: str | None = None,
     ) -> dict[str, Any]:
         """Brine properties (density, viscosity, compressibility, heat capacity,
         enthalpy) with a salinity correction.
@@ -1186,7 +1225,9 @@ class GeneratedMethods:
             _present(
                 pressure=pressure,
                 temperature=temperature,
+                density_correlation=density_correlation,
                 salinity=salinity,
+                viscosity_correlation=viscosity_correlation,
             ),
         )
 
@@ -1254,7 +1295,7 @@ class GeneratedMethods:
         fluid: Any,
         inlet: dict[str, Any],
         pipe_segments: Any,
-        correlations: list[Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"]] | None = None,
+        correlations: list[Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME", "TRICKLE"]] | None = None,
         reference_measured_depth: float | None = None,
         reference_true_vertical_depth: float | None = None,
         reference_x: float | None = None,
@@ -1292,7 +1333,7 @@ class GeneratedMethods:
         roughness: float,
         velocity: list[float],
         viscosity: list[float],
-        correlations: list[Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME"]] | None = None,
+        correlations: list[Literal["Aziz", "Baxendell-Thomas", "Beggs-Brill", "CHAOS", "Dukler", "Duns-Ros", "Fancher-Brown", "GOAT", "Gray", "Griffith-Wallis", "Hagedorn-Slug", "KISS", "Mist", "ml_tuned", "Mukherjee-Brill", "Poettmann-Carpenter", "Default", "QC-high", "QC-low", "SinglePhaseGas", "SUPREME", "TRICKLE"]] | None = None,
     ) -> dict[str, Any]:
         """Run every multiphase pressure-drop correlation (or a subset) on one
         segment and compare the predicted gradients.
@@ -2159,7 +2200,7 @@ class GeneratedMethods:
         *,
         transient_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
-        """Transient multiphase pipe flow, fully-implicit four-field two-fluid
+        """Transient multiphase pipe flow, fully implicit three-zone six-field
         (Graphsolve-Field): for severe slugging and countercurrent flow.
 
         Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
@@ -2176,7 +2217,7 @@ class GeneratedMethods:
         *,
         transient_json: dict[str, Any] | list[Any] | str,
     ) -> dict[str, Any]:
-        """Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-
+        """Transient multiphase pipe flow, semi-implicit three-fluid (Graphsolve-
         Flux): the general-purpose scheme, carrying temperature, the oil/water
         split and salinity.
 
@@ -2401,8 +2442,8 @@ class GeneratedMethods:
     ) -> dict[str, Any]:
         """Data-reconciliation solve (MAP): reconcile pressure gauges and rate
         meters, each with a variance, against the network physics and estimate
-        uncertain source inputs, returning posterior variances and a per-
-        measurement misfit.
+        uncertain source inputs, returning posterior variances and the measurement
+        with the largest misfit (map_diagnostics.worst_measurement).
 
         Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
         """
@@ -2461,6 +2502,49 @@ class GeneratedMethods:
             "transient_rate_history",
             _present(
                 inflow_model=inflow_model,
+            ),
+        )
+
+    def trickle_detail(
+        self,
+        *,
+        angle: float,
+        density: list[float],
+        diameter: float,
+        ift: float,
+        pressure: float,
+        roughness: float,
+        velocity: list[float],
+        viscosity: list[float],
+        evaluate_at: list[dict[str, Any]] | None = None,
+        ift_gas_water: float | None = None,
+        ift_oil_water: float | None = None,
+        options: dict[str, Any] | None = None,
+        scan: bool | None = None,
+    ) -> dict[str, Any]:
+        """TRICKLE's three-phase flow structure at one point, as the transient
+        solvers read it: regime weights, the nine fields, slug unit, cores, oil-
+        water structure and the forces per phase and interface, with optional
+        imposed states.
+
+        Costs 1 credit.
+        """
+        return self.call(
+            "trickle_detail",
+            _present(
+                angle=angle,
+                density=density,
+                diameter=diameter,
+                ift=ift,
+                pressure=pressure,
+                roughness=roughness,
+                velocity=velocity,
+                viscosity=viscosity,
+                evaluate_at=evaluate_at,
+                ift_gas_water=ift_gas_water,
+                ift_oil_water=ift_oil_water,
+                options=options,
+                scan=scan,
             ),
         )
 

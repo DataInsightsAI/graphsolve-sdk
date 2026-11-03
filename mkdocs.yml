@@ -73,6 +73,7 @@ nav:
       - Billing and credits: guides/billing.md
       - Errors and retries: guides/errors.md
       - Long-running jobs: guides/jobs.md
+      - Transient runs and flow stability: guides/transients.md
   - Examples:
       - A single oil well: examples/single-well.md
       - Compressors and compositional equipment: examples/equipment.md

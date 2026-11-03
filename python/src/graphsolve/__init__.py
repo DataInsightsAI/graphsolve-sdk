@@ -38,4 +38,4 @@ __all__ = [
 ]
 
 # Must match pyproject.toml; scripts/check_versions.py fails CI otherwise.
-__version__ = "1.0.42"
+__version__ = "1.0.50"

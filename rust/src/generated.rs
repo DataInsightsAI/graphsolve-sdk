@@ -4,15 +4,15 @@
 //! Run `python emit/emit_rust.py` after a spec change; CI fails if this
 //! file and the spec disagree.
 //!
-//! Engine API version: 1.0.42
-//! Tools: 101
+//! Engine API version: 1.0.50
+//! Tools: 103
 
 use serde::{Deserialize, Serialize};
 
 use crate::{GraphSolve, Result, ToolResponse};
 
 /// Every tool this client knows about, in the order the API lists them.
-pub const TOOL_NAMES: [&str; 101] = [
+pub const TOOL_NAMES: [&str; 103] = [
     "adjust_composition_to_gor",
     "adjust_composition_to_phase_ratio",
     "aggregate_type_well",
@@ -47,6 +47,7 @@ pub const TOOL_NAMES: [&str; 101] = [
     "calculate_reid_vapour_pressure",
     "calculate_saturation_pressure",
     "calculate_screw_compressor",
+    "calculate_trickle_inputs",
     "calculate_turbine",
     "calculate_turbo_machine",
     "calculate_volumetrics",
@@ -112,6 +113,7 @@ pub const TOOL_NAMES: [&str; 101] = [
     "split_plus_fraction",
     "transient_bhp_history",
     "transient_rate_history",
+    "trickle_detail",
     "tune_mpfm_allocation",
     "validate_solver_payload",
 ];
@@ -264,6 +266,8 @@ pub enum FlowCorrelationName {
     SinglePhaseGas,
     #[serde(rename = "SUPREME")]
     Supreme,
+    #[serde(rename = "TRICKLE")]
+    Trickle,
 }
 
 /// Heater/cooler operating mode, spelt as the network `heater_cooler_data.mode`.
@@ -633,9 +637,9 @@ pub struct CalculateChokePressureDropParams {
     pub inlet_temperature: f64,
     /// Compositional stream in place of the black-oil rates and properties:
     /// components, mole fractions, a cubic equation of state and `mass_rate`
-    /// (kg/s). The choke is then the compositional choke edge's: the homogeneous
-    /// orifice, or Sachdeva's model for a two-phase stream, with no pressure
-    /// recovery, so `pipe_diameter_ratio` and `perry_multiplier` do not apply.
+    /// (kg/s). The choke is then the compositional choke edge's: Sachdeva's model
+    /// for every slip model, with the network's default pressure recovery, so
+    /// `pipe_diameter_ratio` and `perry_multiplier` do not apply.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub composition: Option<serde_json::Value>,
     /// Choke discharge coefficient Cd, in (0, 1\] (default: 0.68441971). The mass
@@ -1519,6 +1523,46 @@ pub struct CalculateScrewCompressorParams {
     pub volumetric_efficiency: Option<f64>,
 }
 
+/// Arguments for [`GraphSolve::calculate_trickle_inputs`](crate::GraphSolve::calculate_trickle_inputs).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CalculateTrickleInputsParams {
+    /// Pipe inner diameter in meters
+    pub diameter: f64,
+    /// The fluid: a network `fluids` entry ({id, model_type: black_oil | table |
+    /// equation_of_state | correlations, model}), as solve_network and the
+    /// transient tools take it, or a bare black-oil model (the fields of
+    /// calculate_fluid_properties.fluid_properties)
+    pub fluid: serde_json::Value,
+    /// Pressure at the point in MPa
+    pub pressure: f64,
+    /// Temperature at the point in K
+    pub temperature: f64,
+    /// Pipe angle from vertical in degrees in the flow direction (0=vertical
+    /// upflow, 90=horizontal), passed through to the trickle_detail input
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub angle: Option<f64>,
+    /// Total gas rate in Sm3/day at standard conditions, dissolved and free.
+    /// Omitted, the fluid's own GOR times `oil_rate` (a black-oil
+    /// `dissolved_gas_ratio`, or the surface GOR of an equation-of-state
+    /// composition); a table or correlations fluid needs it
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gas_rate: Option<f64>,
+    /// Oil (or condensate) rate in Sm3/day at standard conditions (default 0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub oil_rate: Option<f64>,
+    /// Absolute pipe roughness in meters, passed through to the trickle_detail
+    /// input
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub roughness: Option<f64>,
+    /// Water salinity in ppm (default: a black-oil model's `salinity`, else fresh
+    /// water; a correlations fluid carries its own)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub salinity: Option<f64>,
+    /// Water rate in Sm3/day at standard conditions (default 0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub water_rate: Option<f64>,
+}
+
 /// Arguments for [`GraphSolve::calculate_turbine`](crate::GraphSolve::calculate_turbine).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct CalculateTurbineParams {
@@ -1605,9 +1649,17 @@ pub struct CalculateWaterPropertiesParams {
     pub pressure: f64,
     /// Temperature in Kelvin (valid range: 273.15 to 500, the correlation range)
     pub temperature: f64,
+    /// Density and compressibility correlation: "internal" (default, Batzle-Wang),
+    /// "batzle_wang", "mao_duan" or "spivey_mccain_north"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub density_correlation: Option<String>,
     /// Water salinity in ppm (default: 0)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub salinity: Option<f64>,
+    /// Viscosity correlation: "internal" (default, Mao-Duan), "mao_duan",
+    /// "batzle_wang" (no pressure dependence) or "kestin"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub viscosity_correlation: Option<String>,
 }
 
 /// Arguments for [`GraphSolve::calculate_wax_deposition_rate`](crate::GraphSolve::calculate_wax_deposition_rate).
@@ -2183,9 +2235,10 @@ pub struct OptimiseNetworkParams {
     /// (`sensitivity`, the   default, or `finite_difference`) and
     /// `degeneracy_check` (default   true: probe the free directions at the answer
     /// and report flat ones   in `diagnostics`). `acceptable_tol` is accepted but
-    /// not yet used.  The result carries `status`, `objective_value`, each
-    /// variable's initial and optimised value, each constraint's value and whether
-    /// it holds, `iterations`, and the solved network in `network_output`.
+    /// not used: the   interior-point backend has no matching option.  The result
+    /// carries `status`, `objective_value`, each variable's initial and optimised
+    /// value, each constraint's value and whether it holds, `iterations`, and the
+    /// solved network in `network_output`.
     pub optimisation_json: serde_json::Value,
 }
 
@@ -2354,48 +2407,49 @@ pub struct RunForecastParams {
     /// `months`, `years`),   `timestep_duration` (default 1) and either
     /// `num_timesteps` or   `end_date`. Months and years are calendar lengths and
     /// need a   whole-number `timestep_duration`. - `engine`: omit for a plain
-    /// solve each step, or `{type: solve,   solver_settings: {max_iter (default
-    /// 10), tolerance (default   1e-6)}}`, or `{type: optimise, variables,
-    /// objective, constraints,   settings, iteration_report (default 1)}` with the
-    /// `optimise_network` shapes. Each step's solve currently takes its   iteration
-    /// limit and tolerance from the network's `solve_parameters`   (defaults 100
-    /// and 1e-6), which override `solver_settings`. - `updates`: time-series
-    /// drivers `{id, target, trigger, driver,   condition?}`. `target` is `{target:
-    /// network, elements: <selector>,   property: <control type as for
-    /// optimise_network>}`; the forms   `{target: optimiser_control_bound,
-    /// variable_id, bound: lower |   upper | initial}`, `{target:
-    /// optimiser_constraint_limit,   constraint_id}` and `{target:
-    /// optimiser_objective_term, term_index,   field: {field: weight} | {field:
-    /// price, phase}}` are accepted but   not yet applied. `trigger` is `{on:
-    /// time}` (x = elapsed time in   `time.unit` at the start of the step), `{on:
-    /// cumulative_production,   key}` or `{on: property, source: <element>,
-    /// property}`. `driver` is   `{kind: constant, value}`, `{kind: linear,
-    /// intercept,   slope_per_unit_time, floor?, cap?}`, `{kind: decline, decline:
-    /// exponential | hyperbolic | harmonic, qi, d, b (default 0.5)}` (d per   unit
-    /// of x) or `{kind: table, xs, ys, interp: linear | step}`.   `condition` is
-    /// `{compare: greater_than | less_than | greater_equal |   less_equal,
-    /// threshold}`, tested on x. - `events`: `{timestep | at (ISO-8601), action}`
-    /// each, `action` one   of `{action: shutdown, element: <selector>}`, `{action:
-    /// startup,   element: <selector>}`, `{action: set_property, target, value}` (a
-    /// lasting override, `target` as in updates) and `{action: workover,   element:
-    /// <selector>, downtime_steps, improvement_factor}` (shut in   for
-    /// `downtime_steps`; the improvement factor is not yet applied). - A
-    /// `<selector>` is `{select: element, element: <element>}`,   `{select: group,
-    /// group: <name>}` (a key of `groups`, which maps   names to element lists) or
-    /// `{select: all_pressure_sources}`. - `transient_wells`: `{node_id,
-    /// rate_history: \[{time_hours, rate}\]}`   for each well whose IPR is a
-    /// transient model. - `failure_policy`: `{policy: continue_with_last}`
-    /// (default: a step   that fails carries the last good rates), `{policy:
-    /// abort}`, or   `{policy: retry_substep, splits}` (the retry is not yet
-    /// implemented; the failed step's own rates are kept). - `result_detail`:
-    /// `summary` (default), `elements` (adds each   element's results per step) or
-    /// `full_snapshots` (adds the solved   network per step; very large). -
-    /// `stream_results` (default true) only matters to callers that   receive per-
-    /// step progress; this tool returns the whole run at once.  Rates and
-    /// cumulatives are keyed `node_<element id>_<phase>` (phase oil, gas, water or
-    /// total) in kSm³/day and kSm³. A `cumulative_production` trigger key currently
-    /// names the node by its 0-based position among the network's node elements
-    /// (`node_0_oil`), not by element id.
+    /// solve each step, or `{type: solve,   solver_settings: {max_iter?,
+    /// tolerance?}}`, or `{type: optimise,   variables, objective, constraints,
+    /// settings, iteration_report   (default 1)}` with the `optimise_network`
+    /// shapes. A `max_iter` or   `tolerance` given in `solver_settings` replaces
+    /// the network's own   for each step's solve; one left out keeps the network's
+    /// `solver_profile` or `solve_parameters` value (defaults 100 and   1e-4). -
+    /// `updates`: time-series drivers `{id, target, trigger, driver,
+    /// condition?}`. `target` is `{target: network, elements: <selector>,
+    /// property: <control type as for optimise_network>}`. With the   optimise
+    /// engine it may also be `{target: optimiser_control_bound,   variable_id,
+    /// bound: lower | upper | initial}`, `{target:   optimiser_constraint_limit,
+    /// constraint_id}` (its `limit`) or   `{target: optimiser_objective_term,
+    /// term_index, field: {field:   weight} | {field: price, phase}}` (a price sets
+    /// every revenue entry   of that phase in a `maximise_revenue` term); each
+    /// step's   optimisation runs with the values written in, and a plain solve
+    /// refuses these targets. `trigger` is `{on: time}` (x = elapsed time in
+    /// `time.unit` at the start of the step), `{on: cumulative_production,   key}`
+    /// or `{on: property, source: <element>, property}`. `driver` is   `{kind:
+    /// constant, value}`, `{kind: linear, intercept,   slope_per_unit_time, floor?,
+    /// cap?}`, `{kind: decline, decline:   exponential | hyperbolic | harmonic, qi,
+    /// d, b (default 0.5)}` (d per   unit of x) or `{kind: table, xs, ys, interp:
+    /// linear | step}`.   `condition` is `{compare: greater_than | less_than |
+    /// greater_equal |   less_equal, threshold}`, tested on x. - `events`:
+    /// `{timestep | at (ISO-8601), action}` each, `action` one   of `{action:
+    /// shutdown, element: <selector>}`, `{action: startup,   element: <selector>}`,
+    /// `{action: set_property, target, value}` (a   lasting override, `target` as
+    /// in updates) and `{action: workover,   element: <selector>, downtime_steps,
+    /// improvement_factor}` (shut in   for `downtime_steps`; the improvement factor
+    /// is not yet applied). - A `<selector>` is `{select: element, element:
+    /// <element>}`,   `{select: group, group: <name>}` (a key of `groups`, which
+    /// maps   names to element lists) or `{select: all_pressure_sources}`. -
+    /// `transient_wells`: `{node_id, rate_history: \[{time_hours, rate}\]}`   for
+    /// each well whose IPR is a transient model. - `failure_policy`: `{policy:
+    /// continue_with_last}` (default: a step   that fails carries the last good
+    /// rates), `{policy: abort}`, or   `{policy: retry_substep, splits}` (the retry
+    /// is not yet   implemented; the failed step's own rates are kept). -
+    /// `result_detail`: `summary` (default), `elements` (adds each   element's
+    /// results per step) or `full_snapshots` (adds the solved   network per step;
+    /// very large). - `stream_results` (default true) only matters to callers that
+    /// receive per-step progress; this tool returns the whole run at once.  Rates
+    /// and cumulatives are keyed `node_<element id>_<phase>` (phase oil, gas, water
+    /// or total) in kSm³/day and kSm³, and a `cumulative_production` trigger key
+    /// names its node the same way.
     pub forecast_json: serde_json::Value,
 }
 
@@ -2599,67 +2653,131 @@ pub struct RunSwellingTestParams {
 pub struct RunTransientFieldParams {
     /// Transient request, as a JSON object or a JSON string. Pressure MPa, rates
     /// kSm3/day at standard conditions, temperature K, lengths m.  Pipe and fluid,
-    /// in one of two forms: - Network: `network_payload` (a model-format network:
-    /// `format`,   `elements`, `fluids`, `sources`) and `path`: `{"select":
-    /// "edges",   "edges": \[{"edge_id": "<id>"}, ...\]}`, the pipe edges of one
-    /// route   listed INLET FIRST. They are joined in that order and not checked
-    /// for   continuity; each keeps its drawn direction (`source` upstream) and
-    /// lays   out its `pipe_geometry` segments from `source` to `target` in the
-    /// order given (survey stations by measured depth). Only the geometry   and the
-    /// fluid are read from the network:   the fluid named by the first edge's
-    /// source node, or the only fluid.   Annulus and zero-length restriction
-    /// segments are not represented. - Bare: `segments` listed OUTLET FIRST, and
-    /// `fluid`, a network fluid   entry `{id, model_type, model}`. A segment has
-    /// `pipe_length` m,   `pipe_diameter` m and `pipe_angle` in degrees from
-    /// vertical along the   flow (0 flowing up, 90 horizontal, 180 flowing down),
-    /// and optionally   `pipe_roughness` m (default 4.6e-5), `max_cell_length` m
-    /// (this   segment only), and `surrounding_temperature` K with
-    /// `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange).  Black-oil
-    /// and table fluids are read from `reference_oil_density`,
-    /// `dissolved_gas_ratio`, `reference_gas_mw` and `salinity` only, through a
-    /// fixed black-oil correlation set; `fluid_type`, correlation choices and
-    /// `pvt_table` are ignored. An equation-of-state fluid is tabulated over (P, T)
-    /// first.  `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`;
-    /// default `hours`), and `record_interval_s`, the recording interval in seconds
-    /// whatever the unit (default 30).  `boundary`, the state at t = 0:
+    /// in one of three forms: - Line: `fluids` (network fluid entries), a `source`
+    /// node, a `line` of   edges listed INLET FIRST and a `sink` node, each block
+    /// in the network   solver's schema. `source` is `{"node_type":
+    /// "fixed_rate_source",   "source_sink_data": {...}}` (its `fixed_rate`, cuts
+    /// or `phase_rates`   split as a network solve splits them;
+    /// `inlet_temperature`) or a   `pressure_dependent_source` with `inflow`, an
+    /// engine inflow model   (`"table"` with `ipr_table` taken point for point, the
+    /// points'   temperatures unused; any other model tabulated). Each `line` edge
+    /// is   `{"edge_type": "pipe", "pipe_data": {...}}`, its `pipe_geometry` from
+    /// the edge's target end, with `injection` calculation points as   gas-lift
+    /// points at their measured depth; a `choke` edge with   `choke_data` may close
+    /// the line as the outlet choke. `sink` is a   `fixed_pressure_sink` whose
+    /// `boundary_pressure` is the outlet   pressure. Field, Flux and Wave all take
+    /// it, except that only Field   takes a well inflow or gas lift, and Flux needs
+    /// a pressure outlet at   t = 0. - Network: `network_payload` (a model-format
+    /// network: `format`,   `elements`, `fluids`, `sources`) and `path`:
+    /// `{"select": "edges",   "edges": \[{"edge_id": "<id>"}, ...\]}`, the pipe
+    /// edges of one route   listed INLET FIRST. They are joined in that order and
+    /// not checked for   continuity; each keeps its drawn direction (`source`
+    /// upstream) with   its `pipe_geometry` laid out as a network solve lays it,
+    /// from the   `target` end to the `source` end, the inlet at the last listed
+    /// segment (survey stations by measured depth). Only the geometry and   the
+    /// fluid are read from the network: the fluid named by the first   edge's
+    /// source node, or the only fluid. An annulus or a restriction   segment is
+    /// refused. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network
+    /// fluid   entry `{id, model_type, model}`. A segment has `pipe_length` m,
+    /// `pipe_diameter` m and `pipe_angle` in degrees from vertical along the   flow
+    /// (0 flowing up, 90 horizontal, 180 flowing down), and optionally
+    /// `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this   segment
+    /// only), and `surrounding_temperature` K with   `heat_transfer_coefficient`
+    /// W/(m2 K) (both, for heat exchange).  Every fluid is baked once into a (P, T)
+    /// table from the engine's own fluid model: a black-oil or table fluid's
+    /// `fluid_type`, correlation choices, `pvt_table` and `salinity` are honoured
+    /// (`reference_oil_density` and `reference_gas_mw` are required), an equation-
+    /// of-state fluid's water takes `pvt.salinity_ppm`.  `flow_model` (optional):
+    /// omitted, every scheme runs the TRICKLE three-phase structure; `trickle` runs
+    /// TRICKLE with the water on its own velocity (Field: its own field and
+    /// momentum row, and `oil_holdup`, `water_holdup`, `oil_velocity`,
+    /// `water_velocity` returned); `goat` runs GOAT's two-fluid closure on one
+    /// lumped liquid through the same structure; `tfs` Wave's two-fluid friction at
+    /// the boundary rates with the drift-flux gas velocity (Wave only; Flux and
+    /// Field refuse it).  `time`: `total` in `unit` (`seconds`, `minutes`, `hours`
+    /// or `days`; default `hours`), and `record_interval_s`, the recording interval
+    /// in seconds whatever the unit (default 30).  `boundary`, the state at t = 0:
     /// `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet
     /// `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the
     /// total gas, dissolved included, and an omitted rate is 0; `inlet_temperature`
     /// K; `water_salinity` ppm of the water entering; and `outlet`: `{"type":
     /// "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area":
-    /// <m2>, "cd": <default 0.84>}`. `outlet_pressure`, `inlet_temperature` and a
-    /// non-zero rate are required in both forms; nothing is taken from the
-    /// network's nodes. The run starts from the steady state of this boundary, and
-    /// Graphsolve-Flux needs a `pressure` outlet at t = 0.  `schedule`: `\[{"at":
-    /// <time in time.unit>, "set": {<boundary fields>}}\]`. Fields not set carry
-    /// forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp
-    /// linearly from the previous event (t = 0 counts as one), so a lone event at
-    /// 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` not given at
-    /// t = 0 applies from the previous event instead. `inlet_temperature`, choke
-    /// `cd` and the outlet `type` step at the event. For a step in a ramped value,
-    /// add an event with an empty `set` at the same `at`, listed first. The outlet
-    /// and the inlet rates are the only valve controls: close the outlet for a
-    /// valve slam, set the rates to 0 for a shut-in.  `results`: `detail` is
-    /// `summary` (default: pressure, gas_fraction and mixture_velocity at the
-    /// outlet and inlet cells), `profiles` (the `variables` listed, default those
-    /// three, at every `cell_stride`-th cell plus both ends, or at the `cells`
-    /// listed by index from 0 at the outlet) or `full` (every variable the scheme
-    /// carries, every cell; `variables`, `cell_stride` and `cells` are ignored).
-    /// Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity,
-    /// liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity,
-    /// solution_gor, sound_speed. Responses over about two million values are
-    /// refused.  `discretisation`: `max_cell_length` m (default 50).  `pvt`, for an
-    /// equation-of-state fluid only: the table's `p_min_mpa`, `p_max_mpa`,
-    /// `t_min_k` and `t_max_k` (inferred from the geometry and boundary when
-    /// omitted; outside them properties are held at the edge) and `pressure_nodes`
-    /// (default 240) and `temperature_nodes` (default 24). The table's water is
-    /// fresh water; `salinity_ppm` does not change it.  Each scheme holds its cells
-    /// in a pressure window and clamps anything outside it: Flux 0.5-15 MPa (and
-    /// 250-450 K), Wave 0.01-50 MPa, Field 0.05-100 MPa. Solver options cannot be
-    /// set. `solver` is set from the tool.  The result is `stats` (cells, length_m,
-    /// simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells,
-    /// `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with
-    /// `values\[sample * n_cells + cell\]`.
+    /// <m2>, "cd": <default 0.84>}`. In the network and bare forms
+    /// `outlet_pressure`, `inlet_temperature` and a non-zero rate are required;
+    /// nothing is taken from the network's nodes. In the line form the nodes give
+    /// them: `boundary` then adds the outlet type, `water_salinity` and
+    /// `lift_gas_rate`, and may give the pressure or temperature only where the
+    /// nodes do not; a line's rates are always its source's. The run starts from
+    /// the steady state of this boundary, and Graphsolve-Flux needs a `pressure`
+    /// outlet at t = 0.  `schedule`: `\[{"at": <time in time.unit>, "set":
+    /// {<boundary fields>}}\]`. Fields not set carry forward. Rates,
+    /// `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the
+    /// previous event (t = 0 counts as one), so a lone event at 0.5 h is a
+    /// 30-minute ramp starting at t = 0; a `water_salinity` first given at a later
+    /// event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd`
+    /// and the outlet `type` step at the event. For a step in a ramped value, add
+    /// an event with an empty `set` at the same `at`, listed first. The outlet and
+    /// the inlet rates are the only valve controls: close the outlet for a valve
+    /// slam, set the rates to 0 for a shut-in. In the line form a `set` takes
+    /// `source` (fields of `source_sink_data`, carried forward and split again) and
+    /// `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`.
+    /// `results`: `detail` is `summary` (default: pressure, gas_fraction and
+    /// mixture_velocity at the outlet and inlet cells), `profiles` (the `variables`
+    /// listed, default those three, at every `cell_stride`-th cell plus both ends,
+    /// or at the `cells` listed by index from 0 at the outlet) or `full` (every
+    /// variable the scheme carries, every cell; `variables`, `cell_stride` and
+    /// `cells` are ignored). Variables: pressure, temperature, gas_fraction,
+    /// liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity,
+    /// mixture_density, oil_fraction, salinity, solution_gor, sound_speed,
+    /// oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about
+    /// two million values are refused.  `discretisation`: `max_cell_length` m
+    /// (default 50).  `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and
+    /// `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted;
+    /// the schemes hold their states inside the box, so widen it for a run that may
+    /// leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36)
+    /// and, for an equation-of-state fluid, `salinity_ppm` of its water.
+    /// `gas_transfer`: how gas moves between solution and the free phase,
+    /// `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"`
+    /// or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once
+    /// and never dissolves again. Field and Flux take any setting (Field takes
+    /// `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is
+    /// set, the steady state the run starts from holds the oil at saturation.
+    /// `slug_capturing`: true (Field only, default false) runs the closure's
+    /// separated flow alone, so slugs form on the grid as cells that fill with
+    /// liquid; it needs cells of the order of the pipe diameter. `steps`: Field
+    /// takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and
+    /// `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone;
+    /// Wave's step is set by its CFL limit and it refuses `steps`.  `equipment`
+    /// (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure;
+    /// `well`, `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
+    /// above it the reservoir takes fluid back along the last segment) or `{"type":
+    /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
+    /// <default 60>}`, the inlet rates then following the inlet pressure and the
+    /// boundary's rates ignored; `gas_lift`, `\[{"distance_from_inlet" m,
+    /// "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}\]`
+    /// supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into
+    /// the tubing or, with a valve, into the annulus, which passes it one way and
+    /// chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas":
+    /// {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"},
+    /// "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against
+    /// `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas,
+    /// annulus pressures and the separator's pressure, level and outflows.  Every
+    /// scheme works inside the pressure and temperature box its fluid was baked
+    /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
+    /// retries shorter (a step accepted at the shortest length is counted in
+    /// `failed_steps`), and Field treats a state outside it as a failed step.
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`,
+    /// `slug_capturing` and `equipment` cannot be set. `solver` is set from the
+    /// tool. Graphsolve-Field also takes a network (gathering and splitting, one
+    /// outlet or several, `boundary.outlets`): `network_payload` with
+    /// `network.branches` (each `{name, path}`), or bare `branches` (each `{name,
+    /// segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
+    /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
+    /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and
+    /// `series` of `{variable, unit, values}` with `values\[sample * n_cells +
+    /// cell\]`.
     pub transient_json: serde_json::Value,
 }
 
@@ -2668,67 +2786,131 @@ pub struct RunTransientFieldParams {
 pub struct RunTransientFluxParams {
     /// Transient request, as a JSON object or a JSON string. Pressure MPa, rates
     /// kSm3/day at standard conditions, temperature K, lengths m.  Pipe and fluid,
-    /// in one of two forms: - Network: `network_payload` (a model-format network:
-    /// `format`,   `elements`, `fluids`, `sources`) and `path`: `{"select":
-    /// "edges",   "edges": \[{"edge_id": "<id>"}, ...\]}`, the pipe edges of one
-    /// route   listed INLET FIRST. They are joined in that order and not checked
-    /// for   continuity; each keeps its drawn direction (`source` upstream) and
-    /// lays   out its `pipe_geometry` segments from `source` to `target` in the
-    /// order given (survey stations by measured depth). Only the geometry   and the
-    /// fluid are read from the network:   the fluid named by the first edge's
-    /// source node, or the only fluid.   Annulus and zero-length restriction
-    /// segments are not represented. - Bare: `segments` listed OUTLET FIRST, and
-    /// `fluid`, a network fluid   entry `{id, model_type, model}`. A segment has
-    /// `pipe_length` m,   `pipe_diameter` m and `pipe_angle` in degrees from
-    /// vertical along the   flow (0 flowing up, 90 horizontal, 180 flowing down),
-    /// and optionally   `pipe_roughness` m (default 4.6e-5), `max_cell_length` m
-    /// (this   segment only), and `surrounding_temperature` K with
-    /// `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange).  Black-oil
-    /// and table fluids are read from `reference_oil_density`,
-    /// `dissolved_gas_ratio`, `reference_gas_mw` and `salinity` only, through a
-    /// fixed black-oil correlation set; `fluid_type`, correlation choices and
-    /// `pvt_table` are ignored. An equation-of-state fluid is tabulated over (P, T)
-    /// first.  `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`;
-    /// default `hours`), and `record_interval_s`, the recording interval in seconds
-    /// whatever the unit (default 30).  `boundary`, the state at t = 0:
+    /// in one of three forms: - Line: `fluids` (network fluid entries), a `source`
+    /// node, a `line` of   edges listed INLET FIRST and a `sink` node, each block
+    /// in the network   solver's schema. `source` is `{"node_type":
+    /// "fixed_rate_source",   "source_sink_data": {...}}` (its `fixed_rate`, cuts
+    /// or `phase_rates`   split as a network solve splits them;
+    /// `inlet_temperature`) or a   `pressure_dependent_source` with `inflow`, an
+    /// engine inflow model   (`"table"` with `ipr_table` taken point for point, the
+    /// points'   temperatures unused; any other model tabulated). Each `line` edge
+    /// is   `{"edge_type": "pipe", "pipe_data": {...}}`, its `pipe_geometry` from
+    /// the edge's target end, with `injection` calculation points as   gas-lift
+    /// points at their measured depth; a `choke` edge with   `choke_data` may close
+    /// the line as the outlet choke. `sink` is a   `fixed_pressure_sink` whose
+    /// `boundary_pressure` is the outlet   pressure. Field, Flux and Wave all take
+    /// it, except that only Field   takes a well inflow or gas lift, and Flux needs
+    /// a pressure outlet at   t = 0. - Network: `network_payload` (a model-format
+    /// network: `format`,   `elements`, `fluids`, `sources`) and `path`:
+    /// `{"select": "edges",   "edges": \[{"edge_id": "<id>"}, ...\]}`, the pipe
+    /// edges of one route   listed INLET FIRST. They are joined in that order and
+    /// not checked for   continuity; each keeps its drawn direction (`source`
+    /// upstream) with   its `pipe_geometry` laid out as a network solve lays it,
+    /// from the   `target` end to the `source` end, the inlet at the last listed
+    /// segment (survey stations by measured depth). Only the geometry and   the
+    /// fluid are read from the network: the fluid named by the first   edge's
+    /// source node, or the only fluid. An annulus or a restriction   segment is
+    /// refused. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network
+    /// fluid   entry `{id, model_type, model}`. A segment has `pipe_length` m,
+    /// `pipe_diameter` m and `pipe_angle` in degrees from vertical along the   flow
+    /// (0 flowing up, 90 horizontal, 180 flowing down), and optionally
+    /// `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this   segment
+    /// only), and `surrounding_temperature` K with   `heat_transfer_coefficient`
+    /// W/(m2 K) (both, for heat exchange).  Every fluid is baked once into a (P, T)
+    /// table from the engine's own fluid model: a black-oil or table fluid's
+    /// `fluid_type`, correlation choices, `pvt_table` and `salinity` are honoured
+    /// (`reference_oil_density` and `reference_gas_mw` are required), an equation-
+    /// of-state fluid's water takes `pvt.salinity_ppm`.  `flow_model` (optional):
+    /// omitted, every scheme runs the TRICKLE three-phase structure; `trickle` runs
+    /// TRICKLE with the water on its own velocity (Field: its own field and
+    /// momentum row, and `oil_holdup`, `water_holdup`, `oil_velocity`,
+    /// `water_velocity` returned); `goat` runs GOAT's two-fluid closure on one
+    /// lumped liquid through the same structure; `tfs` Wave's two-fluid friction at
+    /// the boundary rates with the drift-flux gas velocity (Wave only; Flux and
+    /// Field refuse it).  `time`: `total` in `unit` (`seconds`, `minutes`, `hours`
+    /// or `days`; default `hours`), and `record_interval_s`, the recording interval
+    /// in seconds whatever the unit (default 30).  `boundary`, the state at t = 0:
     /// `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet
     /// `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the
     /// total gas, dissolved included, and an omitted rate is 0; `inlet_temperature`
     /// K; `water_salinity` ppm of the water entering; and `outlet`: `{"type":
     /// "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area":
-    /// <m2>, "cd": <default 0.84>}`. `outlet_pressure`, `inlet_temperature` and a
-    /// non-zero rate are required in both forms; nothing is taken from the
-    /// network's nodes. The run starts from the steady state of this boundary, and
-    /// Graphsolve-Flux needs a `pressure` outlet at t = 0.  `schedule`: `\[{"at":
-    /// <time in time.unit>, "set": {<boundary fields>}}\]`. Fields not set carry
-    /// forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp
-    /// linearly from the previous event (t = 0 counts as one), so a lone event at
-    /// 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` not given at
-    /// t = 0 applies from the previous event instead. `inlet_temperature`, choke
-    /// `cd` and the outlet `type` step at the event. For a step in a ramped value,
-    /// add an event with an empty `set` at the same `at`, listed first. The outlet
-    /// and the inlet rates are the only valve controls: close the outlet for a
-    /// valve slam, set the rates to 0 for a shut-in.  `results`: `detail` is
-    /// `summary` (default: pressure, gas_fraction and mixture_velocity at the
-    /// outlet and inlet cells), `profiles` (the `variables` listed, default those
-    /// three, at every `cell_stride`-th cell plus both ends, or at the `cells`
-    /// listed by index from 0 at the outlet) or `full` (every variable the scheme
-    /// carries, every cell; `variables`, `cell_stride` and `cells` are ignored).
-    /// Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity,
-    /// liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity,
-    /// solution_gor, sound_speed. Responses over about two million values are
-    /// refused.  `discretisation`: `max_cell_length` m (default 50).  `pvt`, for an
-    /// equation-of-state fluid only: the table's `p_min_mpa`, `p_max_mpa`,
-    /// `t_min_k` and `t_max_k` (inferred from the geometry and boundary when
-    /// omitted; outside them properties are held at the edge) and `pressure_nodes`
-    /// (default 240) and `temperature_nodes` (default 24). The table's water is
-    /// fresh water; `salinity_ppm` does not change it.  Each scheme holds its cells
-    /// in a pressure window and clamps anything outside it: Flux 0.5-15 MPa (and
-    /// 250-450 K), Wave 0.01-50 MPa, Field 0.05-100 MPa. Solver options cannot be
-    /// set. `solver` is set from the tool.  The result is `stats` (cells, length_m,
-    /// simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells,
-    /// `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with
-    /// `values\[sample * n_cells + cell\]`.
+    /// <m2>, "cd": <default 0.84>}`. In the network and bare forms
+    /// `outlet_pressure`, `inlet_temperature` and a non-zero rate are required;
+    /// nothing is taken from the network's nodes. In the line form the nodes give
+    /// them: `boundary` then adds the outlet type, `water_salinity` and
+    /// `lift_gas_rate`, and may give the pressure or temperature only where the
+    /// nodes do not; a line's rates are always its source's. The run starts from
+    /// the steady state of this boundary, and Graphsolve-Flux needs a `pressure`
+    /// outlet at t = 0.  `schedule`: `\[{"at": <time in time.unit>, "set":
+    /// {<boundary fields>}}\]`. Fields not set carry forward. Rates,
+    /// `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the
+    /// previous event (t = 0 counts as one), so a lone event at 0.5 h is a
+    /// 30-minute ramp starting at t = 0; a `water_salinity` first given at a later
+    /// event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd`
+    /// and the outlet `type` step at the event. For a step in a ramped value, add
+    /// an event with an empty `set` at the same `at`, listed first. The outlet and
+    /// the inlet rates are the only valve controls: close the outlet for a valve
+    /// slam, set the rates to 0 for a shut-in. In the line form a `set` takes
+    /// `source` (fields of `source_sink_data`, carried forward and split again) and
+    /// `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`.
+    /// `results`: `detail` is `summary` (default: pressure, gas_fraction and
+    /// mixture_velocity at the outlet and inlet cells), `profiles` (the `variables`
+    /// listed, default those three, at every `cell_stride`-th cell plus both ends,
+    /// or at the `cells` listed by index from 0 at the outlet) or `full` (every
+    /// variable the scheme carries, every cell; `variables`, `cell_stride` and
+    /// `cells` are ignored). Variables: pressure, temperature, gas_fraction,
+    /// liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity,
+    /// mixture_density, oil_fraction, salinity, solution_gor, sound_speed,
+    /// oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about
+    /// two million values are refused.  `discretisation`: `max_cell_length` m
+    /// (default 50).  `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and
+    /// `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted;
+    /// the schemes hold their states inside the box, so widen it for a run that may
+    /// leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36)
+    /// and, for an equation-of-state fluid, `salinity_ppm` of its water.
+    /// `gas_transfer`: how gas moves between solution and the free phase,
+    /// `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"`
+    /// or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once
+    /// and never dissolves again. Field and Flux take any setting (Field takes
+    /// `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is
+    /// set, the steady state the run starts from holds the oil at saturation.
+    /// `slug_capturing`: true (Field only, default false) runs the closure's
+    /// separated flow alone, so slugs form on the grid as cells that fill with
+    /// liquid; it needs cells of the order of the pipe diameter. `steps`: Field
+    /// takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and
+    /// `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone;
+    /// Wave's step is set by its CFL limit and it refuses `steps`.  `equipment`
+    /// (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure;
+    /// `well`, `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
+    /// above it the reservoir takes fluid back along the last segment) or `{"type":
+    /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
+    /// <default 60>}`, the inlet rates then following the inlet pressure and the
+    /// boundary's rates ignored; `gas_lift`, `\[{"distance_from_inlet" m,
+    /// "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}\]`
+    /// supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into
+    /// the tubing or, with a valve, into the annulus, which passes it one way and
+    /// chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas":
+    /// {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"},
+    /// "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against
+    /// `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas,
+    /// annulus pressures and the separator's pressure, level and outflows.  Every
+    /// scheme works inside the pressure and temperature box its fluid was baked
+    /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
+    /// retries shorter (a step accepted at the shortest length is counted in
+    /// `failed_steps`), and Field treats a state outside it as a failed step.
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`,
+    /// `slug_capturing` and `equipment` cannot be set. `solver` is set from the
+    /// tool. Graphsolve-Field also takes a network (gathering and splitting, one
+    /// outlet or several, `boundary.outlets`): `network_payload` with
+    /// `network.branches` (each `{name, path}`), or bare `branches` (each `{name,
+    /// segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
+    /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
+    /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and
+    /// `series` of `{variable, unit, values}` with `values\[sample * n_cells +
+    /// cell\]`.
     pub transient_json: serde_json::Value,
 }
 
@@ -2737,67 +2919,131 @@ pub struct RunTransientFluxParams {
 pub struct RunTransientWaveParams {
     /// Transient request, as a JSON object or a JSON string. Pressure MPa, rates
     /// kSm3/day at standard conditions, temperature K, lengths m.  Pipe and fluid,
-    /// in one of two forms: - Network: `network_payload` (a model-format network:
-    /// `format`,   `elements`, `fluids`, `sources`) and `path`: `{"select":
-    /// "edges",   "edges": \[{"edge_id": "<id>"}, ...\]}`, the pipe edges of one
-    /// route   listed INLET FIRST. They are joined in that order and not checked
-    /// for   continuity; each keeps its drawn direction (`source` upstream) and
-    /// lays   out its `pipe_geometry` segments from `source` to `target` in the
-    /// order given (survey stations by measured depth). Only the geometry   and the
-    /// fluid are read from the network:   the fluid named by the first edge's
-    /// source node, or the only fluid.   Annulus and zero-length restriction
-    /// segments are not represented. - Bare: `segments` listed OUTLET FIRST, and
-    /// `fluid`, a network fluid   entry `{id, model_type, model}`. A segment has
-    /// `pipe_length` m,   `pipe_diameter` m and `pipe_angle` in degrees from
-    /// vertical along the   flow (0 flowing up, 90 horizontal, 180 flowing down),
-    /// and optionally   `pipe_roughness` m (default 4.6e-5), `max_cell_length` m
-    /// (this   segment only), and `surrounding_temperature` K with
-    /// `heat_transfer_coefficient` W/(m2 K) (both, for heat exchange).  Black-oil
-    /// and table fluids are read from `reference_oil_density`,
-    /// `dissolved_gas_ratio`, `reference_gas_mw` and `salinity` only, through a
-    /// fixed black-oil correlation set; `fluid_type`, correlation choices and
-    /// `pvt_table` are ignored. An equation-of-state fluid is tabulated over (P, T)
-    /// first.  `time`: `total` in `unit` (`seconds`, `minutes`, `hours` or `days`;
-    /// default `hours`), and `record_interval_s`, the recording interval in seconds
-    /// whatever the unit (default 30).  `boundary`, the state at t = 0:
+    /// in one of three forms: - Line: `fluids` (network fluid entries), a `source`
+    /// node, a `line` of   edges listed INLET FIRST and a `sink` node, each block
+    /// in the network   solver's schema. `source` is `{"node_type":
+    /// "fixed_rate_source",   "source_sink_data": {...}}` (its `fixed_rate`, cuts
+    /// or `phase_rates`   split as a network solve splits them;
+    /// `inlet_temperature`) or a   `pressure_dependent_source` with `inflow`, an
+    /// engine inflow model   (`"table"` with `ipr_table` taken point for point, the
+    /// points'   temperatures unused; any other model tabulated). Each `line` edge
+    /// is   `{"edge_type": "pipe", "pipe_data": {...}}`, its `pipe_geometry` from
+    /// the edge's target end, with `injection` calculation points as   gas-lift
+    /// points at their measured depth; a `choke` edge with   `choke_data` may close
+    /// the line as the outlet choke. `sink` is a   `fixed_pressure_sink` whose
+    /// `boundary_pressure` is the outlet   pressure. Field, Flux and Wave all take
+    /// it, except that only Field   takes a well inflow or gas lift, and Flux needs
+    /// a pressure outlet at   t = 0. - Network: `network_payload` (a model-format
+    /// network: `format`,   `elements`, `fluids`, `sources`) and `path`:
+    /// `{"select": "edges",   "edges": \[{"edge_id": "<id>"}, ...\]}`, the pipe
+    /// edges of one route   listed INLET FIRST. They are joined in that order and
+    /// not checked for   continuity; each keeps its drawn direction (`source`
+    /// upstream) with   its `pipe_geometry` laid out as a network solve lays it,
+    /// from the   `target` end to the `source` end, the inlet at the last listed
+    /// segment (survey stations by measured depth). Only the geometry and   the
+    /// fluid are read from the network: the fluid named by the first   edge's
+    /// source node, or the only fluid. An annulus or a restriction   segment is
+    /// refused. - Bare: `segments` listed OUTLET FIRST, and `fluid`, a network
+    /// fluid   entry `{id, model_type, model}`. A segment has `pipe_length` m,
+    /// `pipe_diameter` m and `pipe_angle` in degrees from vertical along the   flow
+    /// (0 flowing up, 90 horizontal, 180 flowing down), and optionally
+    /// `pipe_roughness` m (default 4.6e-5), `max_cell_length` m (this   segment
+    /// only), and `surrounding_temperature` K with   `heat_transfer_coefficient`
+    /// W/(m2 K) (both, for heat exchange).  Every fluid is baked once into a (P, T)
+    /// table from the engine's own fluid model: a black-oil or table fluid's
+    /// `fluid_type`, correlation choices, `pvt_table` and `salinity` are honoured
+    /// (`reference_oil_density` and `reference_gas_mw` are required), an equation-
+    /// of-state fluid's water takes `pvt.salinity_ppm`.  `flow_model` (optional):
+    /// omitted, every scheme runs the TRICKLE three-phase structure; `trickle` runs
+    /// TRICKLE with the water on its own velocity (Field: its own field and
+    /// momentum row, and `oil_holdup`, `water_holdup`, `oil_velocity`,
+    /// `water_velocity` returned); `goat` runs GOAT's two-fluid closure on one
+    /// lumped liquid through the same structure; `tfs` Wave's two-fluid friction at
+    /// the boundary rates with the drift-flux gas velocity (Wave only; Flux and
+    /// Field refuse it).  `time`: `total` in `unit` (`seconds`, `minutes`, `hours`
+    /// or `days`; default `hours`), and `record_interval_s`, the recording interval
+    /// in seconds whatever the unit (default 30).  `boundary`, the state at t = 0:
     /// `outlet_pressure` MPa (for a choke, the pressure downstream of it); inlet
     /// `oil_rate`, `water_rate` and `gas_rate` kSm3/day, where `gas_rate` is the
     /// total gas, dissolved included, and an omitted rate is 0; `inlet_temperature`
     /// K; `water_salinity` ppm of the water entering; and `outlet`: `{"type":
     /// "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area":
-    /// <m2>, "cd": <default 0.84>}`. `outlet_pressure`, `inlet_temperature` and a
-    /// non-zero rate are required in both forms; nothing is taken from the
-    /// network's nodes. The run starts from the steady state of this boundary, and
-    /// Graphsolve-Flux needs a `pressure` outlet at t = 0.  `schedule`: `\[{"at":
-    /// <time in time.unit>, "set": {<boundary fields>}}\]`. Fields not set carry
-    /// forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp
-    /// linearly from the previous event (t = 0 counts as one), so a lone event at
-    /// 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` not given at
-    /// t = 0 applies from the previous event instead. `inlet_temperature`, choke
-    /// `cd` and the outlet `type` step at the event. For a step in a ramped value,
-    /// add an event with an empty `set` at the same `at`, listed first. The outlet
-    /// and the inlet rates are the only valve controls: close the outlet for a
-    /// valve slam, set the rates to 0 for a shut-in.  `results`: `detail` is
-    /// `summary` (default: pressure, gas_fraction and mixture_velocity at the
-    /// outlet and inlet cells), `profiles` (the `variables` listed, default those
-    /// three, at every `cell_stride`-th cell plus both ends, or at the `cells`
-    /// listed by index from 0 at the outlet) or `full` (every variable the scheme
-    /// carries, every cell; `variables`, `cell_stride` and `cells` are ignored).
-    /// Variables: pressure, temperature, gas_fraction, liquid_holdup, gas_velocity,
-    /// liquid_velocity, mixture_velocity, mixture_density, oil_fraction, salinity,
-    /// solution_gor, sound_speed. Responses over about two million values are
-    /// refused.  `discretisation`: `max_cell_length` m (default 50).  `pvt`, for an
-    /// equation-of-state fluid only: the table's `p_min_mpa`, `p_max_mpa`,
-    /// `t_min_k` and `t_max_k` (inferred from the geometry and boundary when
-    /// omitted; outside them properties are held at the edge) and `pressure_nodes`
-    /// (default 240) and `temperature_nodes` (default 24). The table's water is
-    /// fresh water; `salinity_ppm` does not change it.  Each scheme holds its cells
-    /// in a pressure window and clamps anything outside it: Flux 0.5-15 MPa (and
-    /// 250-450 K), Wave 0.01-50 MPa, Field 0.05-100 MPa. Solver options cannot be
-    /// set. `solver` is set from the tool.  The result is `stats` (cells, length_m,
-    /// simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells,
-    /// `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with
-    /// `values\[sample * n_cells + cell\]`.
+    /// <m2>, "cd": <default 0.84>}`. In the network and bare forms
+    /// `outlet_pressure`, `inlet_temperature` and a non-zero rate are required;
+    /// nothing is taken from the network's nodes. In the line form the nodes give
+    /// them: `boundary` then adds the outlet type, `water_salinity` and
+    /// `lift_gas_rate`, and may give the pressure or temperature only where the
+    /// nodes do not; a line's rates are always its source's. The run starts from
+    /// the steady state of this boundary, and Graphsolve-Flux needs a `pressure`
+    /// outlet at t = 0.  `schedule`: `\[{"at": <time in time.unit>, "set":
+    /// {<boundary fields>}}\]`. Fields not set carry forward. Rates,
+    /// `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the
+    /// previous event (t = 0 counts as one), so a lone event at 0.5 h is a
+    /// 30-minute ramp starting at t = 0; a `water_salinity` first given at a later
+    /// event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd`
+    /// and the outlet `type` step at the event. For a step in a ramped value, add
+    /// an event with an empty `set` at the same `at`, listed first. The outlet and
+    /// the inlet rates are the only valve controls: close the outlet for a valve
+    /// slam, set the rates to 0 for a shut-in. In the line form a `set` takes
+    /// `source` (fields of `source_sink_data`, carried forward and split again) and
+    /// `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`.
+    /// `results`: `detail` is `summary` (default: pressure, gas_fraction and
+    /// mixture_velocity at the outlet and inlet cells), `profiles` (the `variables`
+    /// listed, default those three, at every `cell_stride`-th cell plus both ends,
+    /// or at the `cells` listed by index from 0 at the outlet) or `full` (every
+    /// variable the scheme carries, every cell; `variables`, `cell_stride` and
+    /// `cells` are ignored). Variables: pressure, temperature, gas_fraction,
+    /// liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity,
+    /// mixture_density, oil_fraction, salinity, solution_gor, sound_speed,
+    /// oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about
+    /// two million values are refused.  `discretisation`: `max_cell_length` m
+    /// (default 50).  `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and
+    /// `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted;
+    /// the schemes hold their states inside the box, so widen it for a run that may
+    /// leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36)
+    /// and, for an equation-of-state fluid, `salinity_ppm` of its water.
+    /// `gas_transfer`: how gas moves between solution and the free phase,
+    /// `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"`
+    /// or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once
+    /// and never dissolves again. Field and Flux take any setting (Field takes
+    /// `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is
+    /// set, the steady state the run starts from holds the oil at saturation.
+    /// `slug_capturing`: true (Field only, default false) runs the closure's
+    /// separated flow alone, so slugs form on the grid as cells that fill with
+    /// liquid; it needs cells of the order of the pipe diameter. `steps`: Field
+    /// takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and
+    /// `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone;
+    /// Wave's step is set by its CFL limit and it refuses `steps`.  `equipment`
+    /// (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure;
+    /// `well`, `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
+    /// above it the reservoir takes fluid back along the last segment) or `{"type":
+    /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
+    /// <default 60>}`, the inlet rates then following the inlet pressure and the
+    /// boundary's rates ignored; `gas_lift`, `\[{"distance_from_inlet" m,
+    /// "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}\]`
+    /// supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into
+    /// the tubing or, with a valve, into the annulus, which passes it one way and
+    /// chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas":
+    /// {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"},
+    /// "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against
+    /// `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas,
+    /// annulus pressures and the separator's pressure, level and outflows.  Every
+    /// scheme works inside the pressure and temperature box its fluid was baked
+    /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
+    /// retries shorter (a step accepted at the shortest length is counted in
+    /// `failed_steps`), and Field treats a state outside it as a failed step.
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`,
+    /// `slug_capturing` and `equipment` cannot be set. `solver` is set from the
+    /// tool. Graphsolve-Field also takes a network (gathering and splitting, one
+    /// outlet or several, `boundary.outlets`): `network_payload` with
+    /// `network.branches` (each `{name, path}`), or bare `branches` (each `{name,
+    /// segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
+    /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
+    /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and
+    /// `series` of `{variable, unit, values}` with `values\[sample * n_cells +
+    /// cell\]`.
     pub transient_json: serde_json::Value,
 }
 
@@ -2988,9 +3234,11 @@ pub struct SolveNetworkParams {
     /// `choke`, `heat_exchanger`, `compressor`, `pump`, `turbine`, `jt_valve`,
     /// `heater_cooler`, `reactor`), edges joined by `source`/`target` element ids,
     /// with the `fluids`, `sources` and `process_equipment` libraries at the top
-    /// level and optional `solve_parameters` and `chemical_treatment` blocks. A
-    /// model exported from the app is accepted as it is. The reply carries
-    /// `results` on each element.
+    /// level and optional `solver_profile` (one of the app's solver profiles, as
+    /// stored), `solve_parameters` (laid over the profile key by key) and
+    /// `chemical_treatment` blocks. A model exported from the app is accepted as it
+    /// is, solving with the profile its tab names. The reply carries `results` on
+    /// each element.
     pub network_json: serde_json::Value,
 }
 
@@ -3007,9 +3255,10 @@ pub struct SolveNetworkMapParams {
     /// by `solve_parameters.flow_model`), in kSm^3/day at standard conditions with
     /// variance \[(kSm^3/day)^2\]. Source inputs given a variance in
     /// `source_sink_data.beliefs` (`multiphase` only) are estimated from the
-    /// measurements. Include a `map_config` inside `solve_parameters` to tune
-    /// `physics_variance` and the lambda schedule; if omitted, MAP mode is still
-    /// enabled with engine defaults.
+    /// measurements. Include a `map_config` inside `solve_parameters`, or a
+    /// `solver_profile` whose `solver_mode` is `map`, to tune `physics_variance`
+    /// and the lambda schedule; if omitted, MAP mode is still enabled with engine
+    /// defaults.
     pub network_json: serde_json::Value,
 }
 
@@ -3060,6 +3309,47 @@ pub struct TransientRateHistoryParams {
     /// `rta_history`, samples `{time_hours, rate   \[kSm³/day\], pressure
     /// \[MPa\]}`.  The three history tools need a transient `ipr_model`.
     pub inflow_model: serde_json::Value,
+}
+
+/// Arguments for [`GraphSolve::trickle_detail`](crate::GraphSolve::trickle_detail).
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct TrickleDetailParams {
+    /// Pipe angle from vertical in degrees, in the flow direction (0=vertical
+    /// upflow, 90=horizontal, 180=vertical downflow)
+    pub angle: f64,
+    /// Densities \[gas, oil, water\] in kg/m3
+    pub density: Vec<f64>,
+    /// Pipe diameter in meters
+    pub diameter: f64,
+    /// Gas-oil interfacial tension in N/m (`iftog` of calculate_fluid_properties);
+    /// the gas-liquid tension itself when `ift_gas_water` is not given
+    pub ift: f64,
+    /// Pressure in MPa
+    pub pressure: f64,
+    /// Absolute pipe roughness in meters
+    pub roughness: f64,
+    /// Superficial velocities \[gas, oil, water\] in m/s
+    pub velocity: Vec<f64>,
+    /// Viscosities \[gas, oil, water\] in Pa.s
+    pub viscosity: Vec<f64>,
+    /// Imposed states at which to evaluate the forces, as a transient scheme does.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub evaluate_at: Option<Vec<serde_json::Value>>,
+    /// Gas-water interfacial tension in N/m (`iftgw`). Given, the gas-liquid
+    /// tension TRICKLE reads is `ift` and this weighted by the water share of the
+    /// liquid's superficial velocity, as the transient solvers form it; omitted, it
+    /// is `ift`
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ift_gas_water: Option<f64>,
+    /// Oil-water interfacial tension in N/m (`iftow`; default `ift`)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ift_oil_water: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<serde_json::Value>,
+    /// Scan v_SG at the point's liquid rates for the onsets and the gradient's
+    /// slopes (default true; a few hundred structure solves, milliseconds).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scan: Option<bool>,
 }
 
 /// Arguments for [`GraphSolve::tune_mpfm_allocation`](crate::GraphSolve::tune_mpfm_allocation).
@@ -3660,6 +3950,25 @@ impl GraphSolve {
         params: CalculateScrewCompressorParams,
     ) -> Result<ToolResponse> {
         self.call("calculate_screw_compressor", &params).await
+    }
+
+    /// The in-situ inputs trickle_detail reads at one point (densities,
+    /// viscosities, tensions, superficial velocities) from standard rates,
+    /// pressure, temperature, diameter and a black-oil, table or equation-of-
+    /// state fluid.
+    ///
+    /// Costs 1 credit.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::SolverDidNotConverge`](crate::Error::SolverDidNotConverge)
+    /// when the calculation ran and produced no answer, which is charged.
+    /// Every other variant means nothing was computed and nothing was billed.
+    pub async fn calculate_trickle_inputs(
+        &self,
+        params: CalculateTrickleInputsParams,
+    ) -> Result<ToolResponse> {
+        self.call("calculate_trickle_inputs", &params).await
     }
 
     /// Single-stage centrifugal turbine/expander: outlet P/T and power
@@ -4469,7 +4778,7 @@ impl GraphSolve {
         self.call("run_swelling_test", &params).await
     }
 
-    /// Transient multiphase pipe flow, fully-implicit four-field two-fluid
+    /// Transient multiphase pipe flow, fully implicit three-zone six-field
     /// (Graphsolve-Field): for severe slugging and countercurrent flow.
     ///
     /// Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
@@ -4486,7 +4795,7 @@ impl GraphSolve {
         self.call("run_transient_field", &params).await
     }
 
-    /// Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-
+    /// Transient multiphase pipe flow, semi-implicit three-fluid (Graphsolve-
     /// Flux): the general-purpose scheme, carrying temperature, the oil/water
     /// split and salinity.
     ///
@@ -4614,8 +4923,8 @@ impl GraphSolve {
 
     /// Data-reconciliation solve (MAP): reconcile pressure gauges and rate
     /// meters, each with a variance, against the network physics and estimate
-    /// uncertain source inputs, returning posterior variances and a per-
-    /// measurement misfit.
+    /// uncertain source inputs, returning posterior variances and the
+    /// measurement with the largest misfit (map_diagnostics.worst_measurement).
     ///
     /// Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
     ///
@@ -4677,6 +4986,22 @@ impl GraphSolve {
         params: TransientRateHistoryParams,
     ) -> Result<ToolResponse> {
         self.call("transient_rate_history", &params).await
+    }
+
+    /// TRICKLE's three-phase flow structure at one point, as the transient
+    /// solvers read it: regime weights, the nine fields, slug unit, cores, oil-
+    /// water structure and the forces per phase and interface, with optional
+    /// imposed states.
+    ///
+    /// Costs 1 credit.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::SolverDidNotConverge`](crate::Error::SolverDidNotConverge)
+    /// when the calculation ran and produced no answer, which is charged.
+    /// Every other variant means nothing was computed and nothing was billed.
+    pub async fn trickle_detail(&self, params: TrickleDetailParams) -> Result<ToolResponse> {
+        self.call("trickle_detail", &params).await
     }
 
     /// Regress MPFM allocation parameters against measured observation rows

@@ -81,9 +81,11 @@ Brine properties (density, viscosity, compressibility, heat capacity, enthalpy) 
 
 | Name | Type | Required | Description |
 |---|---|---|---|
+| `density_correlation` | string | no | Density and compressibility correlation: "internal" (default, Batzle-Wang), "batzle_wang", "mao_duan" or "spivey_mccain_north" |
 | `pressure` | number | yes | Pressure in MPa (valid range: 0.1 to 150) |
 | `salinity` | number | no | Water salinity in ppm (default: 0) |
 | `temperature` | number | yes | Temperature in Kelvin (valid range: 273.15 to 500, the correlation range) |
+| `viscosity_correlation` | string | no | Viscosity correlation: "internal" (default, Mao-Duan), "mao_duan", "batzle_wang" (no pressure dependence) or "kestin" |
 
 ### Example: 30 kppm brine
 
