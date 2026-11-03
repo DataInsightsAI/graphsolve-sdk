@@ -20,11 +20,11 @@ Each release lists its changes under these headings:
 
 ## Unreleased
 
-## 1.0.49 — 2026-11-02
+## 1.0.50 — 2026-11-03
 
 ### Added
 
-- `trickle_detail` (102 tools in all): the TRICKLE three-phase flow
+- `trickle_detail`: the TRICKLE three-phase flow
   structure at one point, as the transient solvers read it. It returns the
   regime weights, holdups, phase velocities and pressure gradient, the slug
   unit, the oil-water structure, and the forces on each phase and interface.
@@ -41,6 +41,11 @@ Each release lists its changes under these headings:
     unless `scan` is false. It gives the gradient's slopes, which side of the
     gradient minimum the point is on, and where the onsets lie.
   - With `evaluate_at`, the forces at imposed holdups and velocities.
+- `calculate_trickle_inputs` (103 tools in all): the in-situ inputs
+  `trickle_detail` reads at one point (densities, viscosities, interfacial
+  tensions and superficial velocities), from standard rates, pressure,
+  temperature, diameter and a black-oil, table or equation-of-state fluid.
+  It costs 1 credit.
 - `TRICKLE` is a new `correlation` on `calculate_pressure_drop`.
 - Transient runs: `run_transient_field`, `run_transient_flux` and
   `run_transient_wave` now all run on the TRICKLE three-phase flow structure
@@ -107,6 +112,11 @@ Each release lists its changes under these headings:
   without a wildcard arm needs one more arm. `CalculateWaterPropertiesParams`
   has two new `Option` fields. A struct literal without
   `..Default::default()` must set them.
+
+### Fixed
+
+- `solve_network`: two separators feeding one header no longer fail with a
+  singular system. Every separator outlet now flows out of its vessel.
 
 ### Docs
 
