@@ -466,7 +466,7 @@ def test_every_tool_in_the_spec_has_a_method():
     }
     missing = {t for t in tools if not callable(getattr(GeneratedMethods, t, None))}
     assert not missing, f"{len(missing)} tools have no method: {sorted(missing)[:5]}"
-    assert len(tools) == 101
+    assert len(tools) == 103
 
 
 def test_a_generated_method_forwards_to_the_named_tool():
@@ -523,6 +523,39 @@ def test_nested_machine_and_composition_objects_pass_through_unchanged():
     assert seen["body"]["turbo_machine"] == machine
     assert seen["body"]["composition"] == composition
     assert "fluid" not in seen["body"]
+
+
+def test_trickle_detail_sends_its_options_and_imposed_states_unchanged():
+    seen = {}
+
+    def handler(request):
+        seen["path"] = request.url.path
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json=envelope(result={}))
+
+    options = {"separated_only": True, "oil_water_interface": "wavy"}
+    evaluate_at = [
+        {
+            "holdups": {"gas": 0.6, "oil": 0.3, "water": 0.1},
+            "mixture_velocity_m_s": 2.0,
+        }
+    ]
+    client(with_token(handler)[0]).trickle_detail(
+        pressure=5.0,
+        density=[40.0, 800.0, 1020.0],
+        viscosity=[1.5e-5, 2.0e-3, 6.0e-4],
+        ift=0.02,
+        diameter=0.15,
+        roughness=4.5e-5,
+        velocity=[2.0, 0.5, 0.1],
+        angle=90.0,
+        options=options,
+        evaluate_at=evaluate_at,
+    )
+    assert seen["path"] == "/v1/tools/trickle_detail"
+    assert seen["body"]["options"] == options
+    assert seen["body"]["evaluate_at"] == evaluate_at
+    assert "scan" not in seen["body"]
 
 
 def test_the_compression_train_and_calibration_tools_post_to_their_paths():

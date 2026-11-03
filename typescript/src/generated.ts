@@ -5,8 +5,8 @@
  * Run `python emit/emit_typescript.py` after a spec change; CI fails if
  * this file and the spec disagree.
  *
- * Engine API version: 1.0.42
- * Tools: 101
+ * Engine API version: 1.0.50
+ * Tools: 103
  */
 
 import type { ToolArguments, ToolResponse } from "./types.js";
@@ -47,6 +47,7 @@ export type ToolName =
   | "calculate_reid_vapour_pressure"
   | "calculate_saturation_pressure"
   | "calculate_screw_compressor"
+  | "calculate_trickle_inputs"
   | "calculate_turbine"
   | "calculate_turbo_machine"
   | "calculate_volumetrics"
@@ -112,6 +113,7 @@ export type ToolName =
   | "split_plus_fraction"
   | "transient_bhp_history"
   | "transient_rate_history"
+  | "trickle_detail"
   | "tune_mpfm_allocation"
   | "validate_solver_payload";
 
@@ -167,7 +169,8 @@ export type FlowCorrelationName =
   | "QC-high"
   | "QC-low"
   | "SinglePhaseGas"
-  | "SUPREME";
+  | "SUPREME"
+  | "TRICKLE";
 
 export type HeaterCoolerModeName =
   | "fixed_duty"
@@ -617,6 +620,19 @@ export type CalculateScrewCompressorParams = {
   volumetric_efficiency?: number | null;
 };
 
+export type CalculateTrickleInputsParams = {
+  diameter: number;
+  fluid: unknown;
+  pressure: number;
+  temperature: number;
+  angle?: number | null;
+  gas_rate?: number | null;
+  oil_rate?: number | null;
+  roughness?: number | null;
+  salinity?: number | null;
+  water_rate?: number | null;
+};
+
 export type CalculateTurbineParams = {
   inlet_pressure: number;
   inlet_temperature: number;
@@ -647,7 +663,9 @@ export type CalculateVolumetricsParams = {
 export type CalculateWaterPropertiesParams = {
   pressure: number;
   temperature: number;
+  density_correlation?: string | null;
   salinity?: number | null;
+  viscosity_correlation?: string | null;
 };
 
 export type CalculateWaxDepositionRateParams = {
@@ -988,6 +1006,22 @@ export type TransientBhpHistoryParams = {
 
 export type TransientRateHistoryParams = {
   inflow_model: unknown;
+};
+
+export type TrickleDetailParams = {
+  angle: number;
+  density: number[];
+  diameter: number;
+  ift: number;
+  pressure: number;
+  roughness: number;
+  velocity: number[];
+  viscosity: number[];
+  evaluate_at?: Record<string, unknown>[] | null;
+  ift_gas_water?: number | null;
+  ift_oil_water?: number | null;
+  options?: Record<string, unknown> | null;
+  scan?: boolean | null;
 };
 
 export type TuneMpfmAllocationParams = {
@@ -1415,6 +1449,20 @@ export abstract class GeneratedMethods {
     params: CalculateScrewCompressorParams,
   ): Promise<ToolResponse> {
     return this.call("calculate_screw_compressor", params);
+  }
+
+  /**
+   * The in-situ inputs trickle_detail reads at one point (densities,
+   * viscosities, tensions, superficial velocities) from standard rates,
+   * pressure, temperature, diameter and a black-oil, table or equation-of-
+   * state fluid.
+   *
+   * Costs 1 credit.
+   */
+  calculate_trickle_inputs(
+    params: CalculateTrickleInputsParams,
+  ): Promise<ToolResponse> {
+    return this.call("calculate_trickle_inputs", params);
   }
 
   /**
@@ -1990,7 +2038,7 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Transient multiphase pipe flow, fully-implicit four-field two-fluid
+   * Transient multiphase pipe flow, fully implicit three-zone six-field
    * (Graphsolve-Field): for severe slugging and countercurrent flow.
    *
    * Costs 250 credits, plus 1 per 50 ms beyond the first 30 s of compute.
@@ -2000,7 +2048,7 @@ export abstract class GeneratedMethods {
   }
 
   /**
-   * Transient multiphase pipe flow, semi-implicit sequential (Graphsolve-
+   * Transient multiphase pipe flow, semi-implicit three-fluid (Graphsolve-
    * Flux): the general-purpose scheme, carrying temperature, the oil/water
    * split and salinity.
    *
@@ -2091,8 +2139,8 @@ export abstract class GeneratedMethods {
   /**
    * Data-reconciliation solve (MAP): reconcile pressure gauges and rate
    * meters, each with a variance, against the network physics and estimate
-   * uncertain source inputs, returning posterior variances and a per-
-   * measurement misfit.
+   * uncertain source inputs, returning posterior variances and the
+   * measurement with the largest misfit (map_diagnostics.worst_measurement).
    *
    * Costs 25 credits, plus 1 per 250 ms beyond the first 5 s of compute.
    */
@@ -2132,6 +2180,18 @@ export abstract class GeneratedMethods {
     params: TransientRateHistoryParams,
   ): Promise<ToolResponse> {
     return this.call("transient_rate_history", params);
+  }
+
+  /**
+   * TRICKLE's three-phase flow structure at one point, as the transient
+   * solvers read it: regime weights, the nine fields, slug unit, cores, oil-
+   * water structure and the forces per phase and interface, with optional
+   * imposed states.
+   *
+   * Costs 1 credit.
+   */
+  trickle_detail(params: TrickleDetailParams): Promise<ToolResponse> {
+    return this.call("trickle_detail", params);
   }
 
   /**
