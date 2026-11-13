@@ -14,7 +14,7 @@ All three take the same request (`{"transient_json": …}`) and run as
 |---|---|---|
 | `run_transient_wave` | explicit drift-flux mixture; resolves pressure waves and reports the sound speed; isothermal | valve slam, surge on a closing choke, blowdown front timing: seconds to minutes |
 | `run_transient_flux` | semi-implicit three-fluid (gas with drops, oil, water); energy balance; salinity tracer | a single line over hours: turndown and ramp-up, terrain and severe slugging, shut-in and restart, thermal and salinity fronts |
-| `run_transient_field` | fully implicit six-field; energy balance; dissolved gas as an unknown | wells on an inflow table or model, gas lift through a valve and annulus, separators, an upstream gas volume, networks of branches, falling-film slugging, slug capturing |
+| `run_transient_field` | fully implicit six-field; energy balance; dissolved gas as an unknown | wells on an inflow table or model, gas lift through a valve and annulus, separators, an upstream gas volume, networks of branches, falling-film slugging, slug capturing, slug tracking on a long line |
 
 As a rule:
 
@@ -28,6 +28,57 @@ As a rule:
 Wave's step is set by the sound speed, so it is the most expensive per hour of
 simulated time by a wide margin. Field costs about what Flux costs on a steady
 line and several times more on a slugging one.
+
+## Closure settings
+
+Every scheme takes a `closure` block, each field optional and the closure's own
+calibration when omitted: `emulsion` (true, the emulsion viscosity for mixed
+liquids), `oil_water_slip` (true, drops of one liquid drift through the other),
+`inversion_water_cut` (the water cut at phase inversion, in place of the
+viscosity-ratio estimate), `oil_water_interface` (`faster_layer` or `wavy`),
+`dispersed_cap` (1, an upper bound on the share of the dispersed liquid held as
+drops) and `noslip_froude` ([4, 18], the drift Froude band over which the slug
+unit tends to the no-slip mixture; raised, the unit keeps its slip in a fast
+riser and its film falls back). Field alone adds `zone_band` ([0.001, 0.05],
+the holdup band over which a liquid zone's momentum row blends from riding its
+carrier to its own force balance). None is a calibrated setting: they are for
+studies of a liquid left behind or a riser's liquid, and a run without the block
+is the calibrated closure.
+
+## Slug tracking on a long line
+
+Slug capturing needs cells of about one pipe diameter, so it stops at a few
+kilometres. Field's `slug_tracking` block keeps cells of tens of diameters and
+carries the slugs as objects: where the flow structure holds a slug unit the
+grid runs the separated flow (the film) and each body is a liquid-full stretch
+at the unit's body holdup, its tail at Bendiksen's bubble velocity, laid out
+again on the grid whenever its nose crosses a cell. Bodies are born where the
+unit begins, the line starts with a train of them (`train_unit_length_m`,
+default 300 m), and a body entering a stretch without a unit, a riser say, is
+released to the grid's own closure. The response adds `tracked_slugs` with the
+events (born, merged, died, left, released) and every body's front, tail,
+velocities and mean holdup at each record. It runs at about 1 s steps on a 20 km
+line at 10 m cells, several times the cost of a plain run, and only on a single
+line.
+
+Where a choke closes the line, `outlet.downstream_resistance: {"gas", "liquid"}`
+(Pa per Sm³/s) makes the choke discharge against `outlet_pressure` plus the
+resistances times the rates through it, which is what a pressure measured after
+a choke that rises with the throughput fits.
+
+```python
+run = client.run_transient_field({
+    **request,
+    "slug_tracking": {"train_unit_length_m": 300},
+    "boundary": {**request["boundary"], "outlet": {
+        "type": "choke", "area": 0.00513, "cd": 0.78,
+        "downstream_resistance": {"gas": 1.95e4, "liquid": 4.59e6},
+    }},
+})
+for event in run["tracked_slugs"]["events"]:
+    if event["kind"] == "released":
+        print(event["t_s"], event["x_m"], event["length_m"])
+```
 
 ## Screening with `trickle_detail`
 

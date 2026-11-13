@@ -2,7 +2,7 @@
 
 # Tool reference
 
-Every tool the API offers, generated from the API specification (engine 1.0.50). Each tool is `POST /v1/tools/{name}`, and each client has a method of the same name.
+Every tool the API offers, generated from the API specification (engine 1.0.51). Each tool is `POST /v1/tools/{name}`, and each client has a method of the same name.
 
 | Tool | Domain | What it does | Price |
 |---|---|---|---|
