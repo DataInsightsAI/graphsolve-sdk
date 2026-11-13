@@ -4,7 +4,7 @@
 //! Run `python emit/emit_rust.py` after a spec change; CI fails if this
 //! file and the spec disagree.
 //!
-//! Engine API version: 1.0.51
+//! Engine API version: 1.0.62
 //! Tools: 103
 
 use serde::{Deserialize, Serialize};
