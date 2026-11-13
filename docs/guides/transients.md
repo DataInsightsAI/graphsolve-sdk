@@ -29,32 +29,67 @@ Wave's step is set by the sound speed, so it is the most expensive per hour of
 simulated time by a wide margin. Field costs about what Flux costs on a steady
 line and several times more on a slugging one.
 
-## Closure settings
+## Closure studies
 
-Every scheme takes a `closure` block, each field optional and the closure's own
-calibration when omitted: `emulsion` (true, the emulsion viscosity for mixed
-liquids), `oil_water_slip` (true, drops of one liquid drift through the other),
-`inversion_water_cut` (the water cut at phase inversion, in place of the
-viscosity-ratio estimate), `oil_water_interface` (`faster_layer` or `wavy`),
-`dispersed_cap` (1, an upper bound on the share of the dispersed liquid held as
-drops) and `noslip_froude` ([4, 18], the drift Froude band over which the slug
-unit tends to the no-slip mixture; raised, the unit keeps its slip in a fast
-riser and its film falls back). Field and Flux add `zone_band` ([0.001, 0.05],
-the holdup band over which a liquid zone's momentum row blends from riding its
-carrier to its own force balance), and Flux alone `deposition_coefficient`
-(2.3e-4, the drops' return to the film). Beside the switches, not nested, the
-block takes the kernel's own numbers: `regime_screens` (false), `malnes_coefficient` (83),
-`bubble_c0` (1.2), `bubble_drift_coefficient` (0.35), `body_gas_drift_m_s`
-(0.2), `distributed_limit` ([1.5, 3]), `film_lift_angle_floor` (0.3),
-`annular_onset` ([1, 1.5]), `taylor_film_friction` (0.005),
-`dense_gas_film_friction` (30), `entrainment_cap` (0.35), `wave_friction`
-({coefficient 15, onset_velocity_m_s 5, density_cap 4}), `kh_band` ([0.8,
-1.25]) and, on Field, `drop_relaxation_transits` (1). None is a calibrated
-setting: they are for studies of a liquid left behind or a riser's liquid, a
-run without the block is the calibrated closure, and a value out of its range
-or on the wrong scheme is refused by name. The `trickle_detail` screen takes
-the same fields under `options`, so a screen at a run's `closure` reads that
-run's structure.
+A transient result is the closure's structure at each point, the scheme that
+carries it, and the boundary that drives it. The `closure` block on every
+scheme's request lets a study move one mechanism of the closure at a time, so a
+simulated phenomenon can be traced to its cause or that cause ruled out. Every
+field defaults to the closure as calibrated: a run without the block is the
+released model, and moving a field is a study, not a calibration. The
+`trickle_detail` screen takes the same fields under `options`, so a screen at a
+run's `closure` reads the structure the run carries.
+
+The protocol: run the baseline and record the measures the phenomenon is judged
+by (period, rise per cycle, rise share, mean and standard deviation of the
+pressure, trough and peak of the rates over their means, the share of time the
+liquid runs above its mean); screen the points that matter at the baseline's
+closure with `regime_screens: false` and read the regime weights, the slip and
+the flags; move one field through its range in two or three steps and compare
+the same measures with the grid, steps and record interval held fixed; report
+the before and after. A field whose whole range leaves the measures where they
+were has ruled its mechanism out; one that moves them has found it, and its
+calibration is then a question for the data the closure was calibrated on.
+
+The fields by mechanism, with defaults and ranges (a value out of range, or on
+a scheme that does not take it, is refused by name):
+
+| Mechanism | Fields |
+| --- | --- |
+| The slug unit: body, bubble, no-slip limit | `malnes_coefficient` (83, 20 to 300: lower is a more aerated body), `bubble_c0` (1.2, 1 to 1.5: the bubble nose's speed), `bubble_drift_coefficient` (0.35, 0.1 to 1: the bubble's rise in inclined flow), `body_gas_drift_m_s` (0.2, 0 to 1: the bubbles' drift through the body), `noslip_froude` ([4, 18], 0 < lo < hi: at the default a fast riser is a no-slip mixture; raised, say [40, 180], the unit keeps its slip and its film falls back), `regime_screens` (false) |
+| The film: reversal, loading, entrainment | `annular_onset` ([1, 1.5], 0.5 to 3: the film-reversal band over which the gas comes to carry the film), `taylor_film_friction` (0.005, 0.001 to 0.05), `dense_gas_film_friction` (30, 0 to 100: what moves the loading onset down with pressure), `entrainment_cap` (0.35, 0 to 0.9: how much liquid rides as drops at gas speed), `distributed_limit` ([1.5, 3], 1 to 10), `film_lift_angle_floor` (0.3, 0.05 to 1); Flux `deposition_coefficient` (2.3e-4, > 0) and Field `drop_relaxation_transits` (1, > 0) |
+| The stratified layer: waves and growth | `kh_band` ([0.8, 1.25], 0 < lo < hi: where a layer goes to slugs), `wave_friction` ({coefficient 15, onset_velocity_m_s 5, density_cap 4}, each > 0: the large-wave interfacial friction that sets the layer's holdup) |
+| Oil and water | `emulsion` (true), `oil_water_slip` (true), `inversion_water_cut` (0 < v < 1), `oil_water_interface` (`faster_layer` or `wavy`), `dispersed_cap` (1, 0 to 1) |
+| Solver-side blend | `zone_band` ([0.001, 0.05], Field and Flux: the holdup band below which a thin liquid zone rides its carrier) |
+
+A sweep, one field at a time, comparing one measure:
+
+```python
+import numpy as np
+
+def swing(run):
+    rec = run["recording"]
+    p = np.array(rec["series"][0]["values"]).reshape(-1, rec["n_cells"])
+    top = p[len(p) // 2:, 0] * 10.0  # outlet cell, second half of the run, bar
+    return np.percentile(top, 95) - np.percentile(top, 5)
+
+print("baseline", swing(client.run_transient_field(request)))
+for field, values in {
+    "noslip_froude": [[10, 30], [40, 180]],
+    "entrainment_cap": [0.1, 0.6],
+    "annular_onset": [[0.7, 1.0], [1.3, 2.0]],
+}.items():
+    for v in values:
+        run = client.run_transient_field({**request, "closure": {field: v}})
+        print(field, v, swing(run))
+```
+
+With `results.convergence` set, the response's `convergence` holds each step's
+largest holdup, pressure and temperature change, so a study that moved the step
+can be told from one that moved the physics. The grid, the steps, the boundary
+and the geometry are not closure items: hold them through a closure study and
+vary them in their own. The full page, with a worked riser case, is the docs
+site's *Closure studies*.
 
 ## Slug tracking on a long line
 
