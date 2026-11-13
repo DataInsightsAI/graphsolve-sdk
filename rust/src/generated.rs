@@ -2757,59 +2757,69 @@ pub struct RunTransientFieldParams {
     /// \[4, 18\]: the band of drift Froude number over which the slug unit tends to
     /// the no-slip mixture; raised, say \[40, 180\], the unit keeps its slip at
     /// speed and its film falls back as churn flow does, a study of a riser's
-    /// liquid) and, Field only, `zone_band` (default \[0.001, 0.05\]: the holdup
-    /// band over which a liquid zone's momentum row blends from riding its carrier
-    /// to its own force balance; a thin water layer rides the oil below its top).
-    /// None of these is a calibrated setting; omitted, every scheme runs the
-    /// closure as calibrated. `slug_capturing`: true (Field only, default false)
-    /// runs the closure's separated flow alone, so slugs form on the grid as cells
-    /// that fill with liquid; it needs cells of the order of the pipe diameter.
-    /// `slug_tracking` (Field only, a single line, default off): `{}` or
-    /// `{"train_unit_length_m": 300, "max_body_holdup": 0.9, "min_birth_cells": 3,
-    /// "site_window_m": 1000, "birth_setback_m": 200, "wake_amplitude": 8,
-    /// "wake_decay": 1.06, "min_length_d": 1, "length_spread": 0.5,
-    /// "seed_level_cos": 0.3, "seed": 1}` tracks slug bodies as objects on a coarse
-    /// grid (cells of tens of diameters): where the closure holds a slug unit the
-    /// grid carries the separated flow and the bodies ride on it, born at the
-    /// unit's onset, laid along the line at the start one per
-    /// `train_unit_length_m`, released to the grid's own closure where the closure
-    /// holds no unit (a riser). It costs several times a plain run; the response
-    /// adds `tracked_slugs`: `events` (born, merged, died, left, released, each
-    /// with `t_s`, `id`, `x_m` from the outlet and `length_m`) and `snapshots` at
-    /// each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`, `holdup_mean`
-    /// per body). `steps`: Field takes `dt_s`, `dt_min_s`, `dt_max_s`,
-    /// `max_holdup_change` (default 0.1) and `max_pressure_change` (default 0.05)
-    /// per step; Flux takes `dt_s` alone; Wave's step is set by its CFL limit and
-    /// it refuses `steps`.  `equipment` (Field only): `inlet_gas_volume` m3 of gas
-    /// behind the inlet at its pressure; `well`, `{"type": "table", "points":
-    /// \[{"pressure", "oil_rate", "gas_rate", "water_rate"}\]}` (MPa, kSm3/day; the
-    /// highest pressure is where it stops; above it the reservoir takes fluid back
-    /// along the last segment) or `{"type": "inflow_model", "inflow": <engine
-    /// inflow input with its fluid>, "points": <default 60>}`, the inlet rates then
-    /// following the inlet pressure and the boundary's rates ignored; `gas_lift`,
-    /// `\[{"distance_from_inlet" m, "temperature" K, "valve": {"annulus_volume" m3,
-    /// "port_area" m2, "cd"}}\]` supplied by `boundary.lift_gas_rate` (kSm3/day per
-    /// point, schedulable), into the tubing or, with a valve, into the annulus,
-    /// which passes it one way and chokes at a pressure ratio of 0.55; `separator`,
-    /// `{"volume" m3, "gas": {"type": "held_pressure"} or {"type": "valve", "area"
-    /// m2, "cd"}, "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves
-    /// against `outlet_pressure`. The run then returns `equipment`: inlet rates,
-    /// lift gas, annulus pressures and the separator's pressure, level and
-    /// outflows.  Every scheme works inside the pressure and temperature box its
-    /// fluid was baked over: Wave clamps a cell to it, Flux refuses a step that
-    /// would leave it and retries shorter (a step accepted at the shortest length
-    /// is counted in `failed_steps`), and Field treats a state outside it as a
-    /// failed step. Solver options other than `flow_model`, `steps`,
-    /// `gas_transfer`, `closure`, `slug_capturing`, `slug_tracking` and `equipment`
-    /// cannot be set. `solver` is set from the tool. Graphsolve-Field also takes a
-    /// network (gathering and splitting, one outlet or several,
-    /// `boundary.outlets`): `network_payload` with `network.branches` (each `{name,
-    /// path}`), or bare `branches` (each `{name, segments, downstream, upstream}`)
-    /// with `fluid`, and `sources` (each `{branch, oil_rate, water_rate, gas_rate,
-    /// inlet_temperature, well}`).  The result is `stats` (cells, length_m,
-    /// simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells,
-    /// `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with
-    /// `values\[sample * n_cells + cell\]`.
+    /// liquid) and, Field and Flux, `zone_band` (default \[0.001, 0.05\]: the
+    /// holdup band over which a liquid zone's momentum row blends from riding its
+    /// carrier to its own force balance; a thin water layer rides the oil below its
+    /// top), `regime_screens` (default false: skip the closures the transition
+    /// criteria rule out), the kernel's numbers given beside them
+    /// (`malnes_coefficient` 83, `bubble_c0` 1.2, `bubble_drift_coefficient` 0.35,
+    /// `body_gas_drift_m_s` 0.2, `distributed_limit` \[1.5, 3\],
+    /// `film_lift_angle_floor` 0.3, `annular_onset` \[1, 1.5\],
+    /// `taylor_film_friction` 0.005, `dense_gas_film_friction` 30,
+    /// `entrainment_cap` 0.35, `wave_friction` {coefficient 15, onset_velocity_m_s
+    /// 5, density_cap 4}, `kh_band` \[0.8, 1.25\]), Flux's `deposition_coefficient`
+    /// (2.3e-4) and Field's `drop_relaxation_transits` (1). None of these is a
+    /// calibrated setting: omitted, every scheme runs the closure as calibrated,
+    /// and a value out of range or on the wrong scheme is refused by name.
+    /// `slug_capturing`: true (Field only, default false) runs the closure's
+    /// separated flow alone, so slugs form on the grid as cells that fill with
+    /// liquid; it needs cells of the order of the pipe diameter. `slug_tracking`
+    /// (Field only, a single line, default off): `{}` or `{"train_unit_length_m":
+    /// 300, "max_body_holdup": 0.9, "min_birth_cells": 3, "site_window_m": 1000,
+    /// "birth_setback_m": 200, "wake_amplitude": 8, "wake_decay": 1.06,
+    /// "min_length_d": 1, "length_spread": 0.5, "seed_level_cos": 0.3, "seed": 1}`
+    /// tracks slug bodies as objects on a coarse grid (cells of tens of diameters):
+    /// where the closure holds a slug unit the grid carries the separated flow and
+    /// the bodies ride on it, born at the unit's onset, laid along the line at the
+    /// start one per `train_unit_length_m`, released to the grid's own closure
+    /// where the closure holds no unit (a riser). It costs several times a plain
+    /// run; the response adds `tracked_slugs`: `events` (born, merged, died, left,
+    /// released, each with `t_s`, `id`, `x_m` from the outlet and `length_m`) and
+    /// `snapshots` at each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`,
+    /// `holdup_mean` per body). `steps`: Field takes `dt_s`, `dt_min_s`,
+    /// `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change`
+    /// (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its
+    /// CFL limit and it refuses `steps`.  `equipment` (Field only):
+    /// `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`,
+    /// `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
+    /// above it the reservoir takes fluid back along the last segment) or `{"type":
+    /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
+    /// <default 60>}`, the inlet rates then following the inlet pressure and the
+    /// boundary's rates ignored; `gas_lift`, `\[{"distance_from_inlet" m,
+    /// "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}\]`
+    /// supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into
+    /// the tubing or, with a valve, into the annulus, which passes it one way and
+    /// chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas":
+    /// {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"},
+    /// "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against
+    /// `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas,
+    /// annulus pressures and the separator's pressure, level and outflows.  Every
+    /// scheme works inside the pressure and temperature box its fluid was baked
+    /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
+    /// retries shorter (a step accepted at the shortest length is counted in
+    /// `failed_steps`), and Field treats a state outside it as a failed step.
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`, `closure`,
+    /// `slug_capturing`, `slug_tracking` and `equipment` cannot be set. `solver` is
+    /// set from the tool. Graphsolve-Field also takes a network (gathering and
+    /// splitting, one outlet or several, `boundary.outlets`): `network_payload`
+    /// with `network.branches` (each `{name, path}`), or bare `branches` (each
+    /// `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
+    /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
+    /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and
+    /// `series` of `{variable, unit, values}` with `values\[sample * n_cells +
+    /// cell\]`.
     pub transient_json: serde_json::Value,
 }
 
@@ -2922,59 +2932,69 @@ pub struct RunTransientFluxParams {
     /// \[4, 18\]: the band of drift Froude number over which the slug unit tends to
     /// the no-slip mixture; raised, say \[40, 180\], the unit keeps its slip at
     /// speed and its film falls back as churn flow does, a study of a riser's
-    /// liquid) and, Field only, `zone_band` (default \[0.001, 0.05\]: the holdup
-    /// band over which a liquid zone's momentum row blends from riding its carrier
-    /// to its own force balance; a thin water layer rides the oil below its top).
-    /// None of these is a calibrated setting; omitted, every scheme runs the
-    /// closure as calibrated. `slug_capturing`: true (Field only, default false)
-    /// runs the closure's separated flow alone, so slugs form on the grid as cells
-    /// that fill with liquid; it needs cells of the order of the pipe diameter.
-    /// `slug_tracking` (Field only, a single line, default off): `{}` or
-    /// `{"train_unit_length_m": 300, "max_body_holdup": 0.9, "min_birth_cells": 3,
-    /// "site_window_m": 1000, "birth_setback_m": 200, "wake_amplitude": 8,
-    /// "wake_decay": 1.06, "min_length_d": 1, "length_spread": 0.5,
-    /// "seed_level_cos": 0.3, "seed": 1}` tracks slug bodies as objects on a coarse
-    /// grid (cells of tens of diameters): where the closure holds a slug unit the
-    /// grid carries the separated flow and the bodies ride on it, born at the
-    /// unit's onset, laid along the line at the start one per
-    /// `train_unit_length_m`, released to the grid's own closure where the closure
-    /// holds no unit (a riser). It costs several times a plain run; the response
-    /// adds `tracked_slugs`: `events` (born, merged, died, left, released, each
-    /// with `t_s`, `id`, `x_m` from the outlet and `length_m`) and `snapshots` at
-    /// each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`, `holdup_mean`
-    /// per body). `steps`: Field takes `dt_s`, `dt_min_s`, `dt_max_s`,
-    /// `max_holdup_change` (default 0.1) and `max_pressure_change` (default 0.05)
-    /// per step; Flux takes `dt_s` alone; Wave's step is set by its CFL limit and
-    /// it refuses `steps`.  `equipment` (Field only): `inlet_gas_volume` m3 of gas
-    /// behind the inlet at its pressure; `well`, `{"type": "table", "points":
-    /// \[{"pressure", "oil_rate", "gas_rate", "water_rate"}\]}` (MPa, kSm3/day; the
-    /// highest pressure is where it stops; above it the reservoir takes fluid back
-    /// along the last segment) or `{"type": "inflow_model", "inflow": <engine
-    /// inflow input with its fluid>, "points": <default 60>}`, the inlet rates then
-    /// following the inlet pressure and the boundary's rates ignored; `gas_lift`,
-    /// `\[{"distance_from_inlet" m, "temperature" K, "valve": {"annulus_volume" m3,
-    /// "port_area" m2, "cd"}}\]` supplied by `boundary.lift_gas_rate` (kSm3/day per
-    /// point, schedulable), into the tubing or, with a valve, into the annulus,
-    /// which passes it one way and chokes at a pressure ratio of 0.55; `separator`,
-    /// `{"volume" m3, "gas": {"type": "held_pressure"} or {"type": "valve", "area"
-    /// m2, "cd"}, "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves
-    /// against `outlet_pressure`. The run then returns `equipment`: inlet rates,
-    /// lift gas, annulus pressures and the separator's pressure, level and
-    /// outflows.  Every scheme works inside the pressure and temperature box its
-    /// fluid was baked over: Wave clamps a cell to it, Flux refuses a step that
-    /// would leave it and retries shorter (a step accepted at the shortest length
-    /// is counted in `failed_steps`), and Field treats a state outside it as a
-    /// failed step. Solver options other than `flow_model`, `steps`,
-    /// `gas_transfer`, `closure`, `slug_capturing`, `slug_tracking` and `equipment`
-    /// cannot be set. `solver` is set from the tool. Graphsolve-Field also takes a
-    /// network (gathering and splitting, one outlet or several,
-    /// `boundary.outlets`): `network_payload` with `network.branches` (each `{name,
-    /// path}`), or bare `branches` (each `{name, segments, downstream, upstream}`)
-    /// with `fluid`, and `sources` (each `{branch, oil_rate, water_rate, gas_rate,
-    /// inlet_temperature, well}`).  The result is `stats` (cells, length_m,
-    /// simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells,
-    /// `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with
-    /// `values\[sample * n_cells + cell\]`.
+    /// liquid) and, Field and Flux, `zone_band` (default \[0.001, 0.05\]: the
+    /// holdup band over which a liquid zone's momentum row blends from riding its
+    /// carrier to its own force balance; a thin water layer rides the oil below its
+    /// top), `regime_screens` (default false: skip the closures the transition
+    /// criteria rule out), the kernel's numbers given beside them
+    /// (`malnes_coefficient` 83, `bubble_c0` 1.2, `bubble_drift_coefficient` 0.35,
+    /// `body_gas_drift_m_s` 0.2, `distributed_limit` \[1.5, 3\],
+    /// `film_lift_angle_floor` 0.3, `annular_onset` \[1, 1.5\],
+    /// `taylor_film_friction` 0.005, `dense_gas_film_friction` 30,
+    /// `entrainment_cap` 0.35, `wave_friction` {coefficient 15, onset_velocity_m_s
+    /// 5, density_cap 4}, `kh_band` \[0.8, 1.25\]), Flux's `deposition_coefficient`
+    /// (2.3e-4) and Field's `drop_relaxation_transits` (1). None of these is a
+    /// calibrated setting: omitted, every scheme runs the closure as calibrated,
+    /// and a value out of range or on the wrong scheme is refused by name.
+    /// `slug_capturing`: true (Field only, default false) runs the closure's
+    /// separated flow alone, so slugs form on the grid as cells that fill with
+    /// liquid; it needs cells of the order of the pipe diameter. `slug_tracking`
+    /// (Field only, a single line, default off): `{}` or `{"train_unit_length_m":
+    /// 300, "max_body_holdup": 0.9, "min_birth_cells": 3, "site_window_m": 1000,
+    /// "birth_setback_m": 200, "wake_amplitude": 8, "wake_decay": 1.06,
+    /// "min_length_d": 1, "length_spread": 0.5, "seed_level_cos": 0.3, "seed": 1}`
+    /// tracks slug bodies as objects on a coarse grid (cells of tens of diameters):
+    /// where the closure holds a slug unit the grid carries the separated flow and
+    /// the bodies ride on it, born at the unit's onset, laid along the line at the
+    /// start one per `train_unit_length_m`, released to the grid's own closure
+    /// where the closure holds no unit (a riser). It costs several times a plain
+    /// run; the response adds `tracked_slugs`: `events` (born, merged, died, left,
+    /// released, each with `t_s`, `id`, `x_m` from the outlet and `length_m`) and
+    /// `snapshots` at each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`,
+    /// `holdup_mean` per body). `steps`: Field takes `dt_s`, `dt_min_s`,
+    /// `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change`
+    /// (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its
+    /// CFL limit and it refuses `steps`.  `equipment` (Field only):
+    /// `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`,
+    /// `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
+    /// above it the reservoir takes fluid back along the last segment) or `{"type":
+    /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
+    /// <default 60>}`, the inlet rates then following the inlet pressure and the
+    /// boundary's rates ignored; `gas_lift`, `\[{"distance_from_inlet" m,
+    /// "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}\]`
+    /// supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into
+    /// the tubing or, with a valve, into the annulus, which passes it one way and
+    /// chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas":
+    /// {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"},
+    /// "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against
+    /// `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas,
+    /// annulus pressures and the separator's pressure, level and outflows.  Every
+    /// scheme works inside the pressure and temperature box its fluid was baked
+    /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
+    /// retries shorter (a step accepted at the shortest length is counted in
+    /// `failed_steps`), and Field treats a state outside it as a failed step.
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`, `closure`,
+    /// `slug_capturing`, `slug_tracking` and `equipment` cannot be set. `solver` is
+    /// set from the tool. Graphsolve-Field also takes a network (gathering and
+    /// splitting, one outlet or several, `boundary.outlets`): `network_payload`
+    /// with `network.branches` (each `{name, path}`), or bare `branches` (each
+    /// `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
+    /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
+    /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and
+    /// `series` of `{variable, unit, values}` with `values\[sample * n_cells +
+    /// cell\]`.
     pub transient_json: serde_json::Value,
 }
 
@@ -3087,59 +3107,69 @@ pub struct RunTransientWaveParams {
     /// \[4, 18\]: the band of drift Froude number over which the slug unit tends to
     /// the no-slip mixture; raised, say \[40, 180\], the unit keeps its slip at
     /// speed and its film falls back as churn flow does, a study of a riser's
-    /// liquid) and, Field only, `zone_band` (default \[0.001, 0.05\]: the holdup
-    /// band over which a liquid zone's momentum row blends from riding its carrier
-    /// to its own force balance; a thin water layer rides the oil below its top).
-    /// None of these is a calibrated setting; omitted, every scheme runs the
-    /// closure as calibrated. `slug_capturing`: true (Field only, default false)
-    /// runs the closure's separated flow alone, so slugs form on the grid as cells
-    /// that fill with liquid; it needs cells of the order of the pipe diameter.
-    /// `slug_tracking` (Field only, a single line, default off): `{}` or
-    /// `{"train_unit_length_m": 300, "max_body_holdup": 0.9, "min_birth_cells": 3,
-    /// "site_window_m": 1000, "birth_setback_m": 200, "wake_amplitude": 8,
-    /// "wake_decay": 1.06, "min_length_d": 1, "length_spread": 0.5,
-    /// "seed_level_cos": 0.3, "seed": 1}` tracks slug bodies as objects on a coarse
-    /// grid (cells of tens of diameters): where the closure holds a slug unit the
-    /// grid carries the separated flow and the bodies ride on it, born at the
-    /// unit's onset, laid along the line at the start one per
-    /// `train_unit_length_m`, released to the grid's own closure where the closure
-    /// holds no unit (a riser). It costs several times a plain run; the response
-    /// adds `tracked_slugs`: `events` (born, merged, died, left, released, each
-    /// with `t_s`, `id`, `x_m` from the outlet and `length_m`) and `snapshots` at
-    /// each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`, `holdup_mean`
-    /// per body). `steps`: Field takes `dt_s`, `dt_min_s`, `dt_max_s`,
-    /// `max_holdup_change` (default 0.1) and `max_pressure_change` (default 0.05)
-    /// per step; Flux takes `dt_s` alone; Wave's step is set by its CFL limit and
-    /// it refuses `steps`.  `equipment` (Field only): `inlet_gas_volume` m3 of gas
-    /// behind the inlet at its pressure; `well`, `{"type": "table", "points":
-    /// \[{"pressure", "oil_rate", "gas_rate", "water_rate"}\]}` (MPa, kSm3/day; the
-    /// highest pressure is where it stops; above it the reservoir takes fluid back
-    /// along the last segment) or `{"type": "inflow_model", "inflow": <engine
-    /// inflow input with its fluid>, "points": <default 60>}`, the inlet rates then
-    /// following the inlet pressure and the boundary's rates ignored; `gas_lift`,
-    /// `\[{"distance_from_inlet" m, "temperature" K, "valve": {"annulus_volume" m3,
-    /// "port_area" m2, "cd"}}\]` supplied by `boundary.lift_gas_rate` (kSm3/day per
-    /// point, schedulable), into the tubing or, with a valve, into the annulus,
-    /// which passes it one way and chokes at a pressure ratio of 0.55; `separator`,
-    /// `{"volume" m3, "gas": {"type": "held_pressure"} or {"type": "valve", "area"
-    /// m2, "cd"}, "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves
-    /// against `outlet_pressure`. The run then returns `equipment`: inlet rates,
-    /// lift gas, annulus pressures and the separator's pressure, level and
-    /// outflows.  Every scheme works inside the pressure and temperature box its
-    /// fluid was baked over: Wave clamps a cell to it, Flux refuses a step that
-    /// would leave it and retries shorter (a step accepted at the shortest length
-    /// is counted in `failed_steps`), and Field treats a state outside it as a
-    /// failed step. Solver options other than `flow_model`, `steps`,
-    /// `gas_transfer`, `closure`, `slug_capturing`, `slug_tracking` and `equipment`
-    /// cannot be set. `solver` is set from the tool. Graphsolve-Field also takes a
-    /// network (gathering and splitting, one outlet or several,
-    /// `boundary.outlets`): `network_payload` with `network.branches` (each `{name,
-    /// path}`), or bare `branches` (each `{name, segments, downstream, upstream}`)
-    /// with `fluid`, and `sources` (each `{branch, oil_rate, water_rate, gas_rate,
-    /// inlet_temperature, well}`).  The result is `stats` (cells, length_m,
-    /// simulated_s, steps, ...) and `recording`: `geometry` of the recorded cells,
-    /// `time_s`, `n_cells`, and `series` of `{variable, unit, values}` with
-    /// `values\[sample * n_cells + cell\]`.
+    /// liquid) and, Field and Flux, `zone_band` (default \[0.001, 0.05\]: the
+    /// holdup band over which a liquid zone's momentum row blends from riding its
+    /// carrier to its own force balance; a thin water layer rides the oil below its
+    /// top), `regime_screens` (default false: skip the closures the transition
+    /// criteria rule out), the kernel's numbers given beside them
+    /// (`malnes_coefficient` 83, `bubble_c0` 1.2, `bubble_drift_coefficient` 0.35,
+    /// `body_gas_drift_m_s` 0.2, `distributed_limit` \[1.5, 3\],
+    /// `film_lift_angle_floor` 0.3, `annular_onset` \[1, 1.5\],
+    /// `taylor_film_friction` 0.005, `dense_gas_film_friction` 30,
+    /// `entrainment_cap` 0.35, `wave_friction` {coefficient 15, onset_velocity_m_s
+    /// 5, density_cap 4}, `kh_band` \[0.8, 1.25\]), Flux's `deposition_coefficient`
+    /// (2.3e-4) and Field's `drop_relaxation_transits` (1). None of these is a
+    /// calibrated setting: omitted, every scheme runs the closure as calibrated,
+    /// and a value out of range or on the wrong scheme is refused by name.
+    /// `slug_capturing`: true (Field only, default false) runs the closure's
+    /// separated flow alone, so slugs form on the grid as cells that fill with
+    /// liquid; it needs cells of the order of the pipe diameter. `slug_tracking`
+    /// (Field only, a single line, default off): `{}` or `{"train_unit_length_m":
+    /// 300, "max_body_holdup": 0.9, "min_birth_cells": 3, "site_window_m": 1000,
+    /// "birth_setback_m": 200, "wake_amplitude": 8, "wake_decay": 1.06,
+    /// "min_length_d": 1, "length_spread": 0.5, "seed_level_cos": 0.3, "seed": 1}`
+    /// tracks slug bodies as objects on a coarse grid (cells of tens of diameters):
+    /// where the closure holds a slug unit the grid carries the separated flow and
+    /// the bodies ride on it, born at the unit's onset, laid along the line at the
+    /// start one per `train_unit_length_m`, released to the grid's own closure
+    /// where the closure holds no unit (a riser). It costs several times a plain
+    /// run; the response adds `tracked_slugs`: `events` (born, merged, died, left,
+    /// released, each with `t_s`, `id`, `x_m` from the outlet and `length_m`) and
+    /// `snapshots` at each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`,
+    /// `holdup_mean` per body). `steps`: Field takes `dt_s`, `dt_min_s`,
+    /// `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change`
+    /// (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its
+    /// CFL limit and it refuses `steps`.  `equipment` (Field only):
+    /// `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`,
+    /// `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
+    /// above it the reservoir takes fluid back along the last segment) or `{"type":
+    /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
+    /// <default 60>}`, the inlet rates then following the inlet pressure and the
+    /// boundary's rates ignored; `gas_lift`, `\[{"distance_from_inlet" m,
+    /// "temperature" K, "valve": {"annulus_volume" m3, "port_area" m2, "cd"}}\]`
+    /// supplied by `boundary.lift_gas_rate` (kSm3/day per point, schedulable), into
+    /// the tubing or, with a valve, into the annulus, which passes it one way and
+    /// chokes at a pressure ratio of 0.55; `separator`, `{"volume" m3, "gas":
+    /// {"type": "held_pressure"} or {"type": "valve", "area" m2, "cd"},
+    /// "level_set_point" (share), "drain_gain" 1/s}`, whose gas leaves against
+    /// `outlet_pressure`. The run then returns `equipment`: inlet rates, lift gas,
+    /// annulus pressures and the separator's pressure, level and outflows.  Every
+    /// scheme works inside the pressure and temperature box its fluid was baked
+    /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
+    /// retries shorter (a step accepted at the shortest length is counted in
+    /// `failed_steps`), and Field treats a state outside it as a failed step.
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`, `closure`,
+    /// `slug_capturing`, `slug_tracking` and `equipment` cannot be set. `solver` is
+    /// set from the tool. Graphsolve-Field also takes a network (gathering and
+    /// splitting, one outlet or several, `boundary.outlets`): `network_payload`
+    /// with `network.branches` (each `{name, path}`), or bare `branches` (each
+    /// `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
+    /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
+    /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and
+    /// `series` of `{variable, unit, values}` with `values\[sample * n_cells +
+    /// cell\]`.
     pub transient_json: serde_json::Value,
 }
 

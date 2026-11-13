@@ -39,11 +39,22 @@ viscosity-ratio estimate), `oil_water_interface` (`faster_layer` or `wavy`),
 `dispersed_cap` (1, an upper bound on the share of the dispersed liquid held as
 drops) and `noslip_froude` ([4, 18], the drift Froude band over which the slug
 unit tends to the no-slip mixture; raised, the unit keeps its slip in a fast
-riser and its film falls back). Field alone adds `zone_band` ([0.001, 0.05],
+riser and its film falls back). Field and Flux add `zone_band` ([0.001, 0.05],
 the holdup band over which a liquid zone's momentum row blends from riding its
-carrier to its own force balance). None is a calibrated setting: they are for
-studies of a liquid left behind or a riser's liquid, and a run without the block
-is the calibrated closure.
+carrier to its own force balance), and Flux alone `deposition_coefficient`
+(2.3e-4, the drops' return to the film). Beside the switches, not nested, the
+block takes the kernel's own numbers: `regime_screens` (false), `malnes_coefficient` (83),
+`bubble_c0` (1.2), `bubble_drift_coefficient` (0.35), `body_gas_drift_m_s`
+(0.2), `distributed_limit` ([1.5, 3]), `film_lift_angle_floor` (0.3),
+`annular_onset` ([1, 1.5]), `taylor_film_friction` (0.005),
+`dense_gas_film_friction` (30), `entrainment_cap` (0.35), `wave_friction`
+({coefficient 15, onset_velocity_m_s 5, density_cap 4}), `kh_band` ([0.8,
+1.25]) and, on Field, `drop_relaxation_transits` (1). None is a calibrated
+setting: they are for studies of a liquid left behind or a riser's liquid, a
+run without the block is the calibrated closure, and a value out of its range
+or on the wrong scheme is refused by name. The `trickle_detail` screen takes
+the same fields under `options`, so a screen at a run's `closure` reads that
+run's structure.
 
 ## Slug tracking on a long line
 
