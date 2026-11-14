@@ -15,7 +15,7 @@ classifiers = [
   "Topic :: Scientific/Engineering",
 ]
 # The version of the engine API this client was generated from. Set by scripts/set_version.py.
-version = "1.0.50"
+version = "1.0.65"
 dependencies = ["httpx>=0.27"]
 
 [project.optional-dependencies]
