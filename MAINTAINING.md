@@ -59,7 +59,8 @@ gh api repos/actions/checkout/tags --jq '.[0] | "\(.name) \(.commit.sha)"'
 
 ## Releasing
 
-Tags are per-language, so the clients release independently:
+The three clients carry the engine's version and are released together, once
+per engine release. Each still has its own tag and publish workflow:
 
 | Tag | Publishes | Environment |
 |---|---|---|
@@ -67,8 +68,11 @@ Tags are per-language, so the clients release independently:
 | `ts-v1.2.0` | `@graphsolve/sdk` on npm | `npm` |
 | `rust-v1.2.0` | `graphsolve` on crates.io | `crates-io` |
 
-Before tagging, move the `## Unreleased` entries in
-[`CHANGELOG.md`](CHANGELOG.md) under a new `## X.Y.Z — YYYY-MM-DD` heading.
+The release pull request (see below) opens the `## X.Y.Z — YYYY-MM-DD` section
+in [`CHANGELOG.md`](CHANGELOG.md), with the `## Unreleased` entries and the
+tools the spec added or removed. Edit it before merging. Once the pull request
+is merged, `scripts/tag-release.sh` on an up-to-date `main` pushes the three
+tags.
 Write for users: name every new tool, and put anything that can break a
 working call under **Breaking**: a newly required argument, a removed tool, a
 type change in one client. Put changed prices under **Changed**. Mark a change
@@ -107,7 +111,39 @@ reverting a commit does not unpublish it.
 The primary check belongs in the engine's release job, **before** the spec is
 pushed. `scripts/sync-spec.sh` runs it before the copy for the same reason.
 
-### Doing it by hand — the way it works today
+### The engine's release opens a pull request here
+
+The last job of the engine's release workflow checks this repository out, runs
+`scripts/sync-spec.sh` on the released spec, and opens a pull request named
+`Engine X.Y.Z` from a branch `engine-vX.Y.Z`. The pull request holds:
+
+- the spec;
+- the three clients and the tool reference pages regenerated from it;
+- every client version set to the engine's (`scripts/set_version.py`);
+- a new `CHANGELOG.md` section (`scripts/changelog_entry.py`).
+
+CI runs on it like on any other pull request, including the documentation
+build. Merging it publishes the documentation site, which `docs.yml` builds
+from `main`.
+
+Two rules the job follows:
+
+1. **A pull request, never a push to `main`.** A spec-only push leaves the three
+   generated clients stale and turns `main` red on the drift check.
+2. **Everything is regenerated on the engine's side.** A pull request opened by
+   this repository's own `GITHUB_TOKEN` does not trigger `pull_request`
+   workflows, so CI would never run on it.
+
+The job authenticates as a **GitHub App** installed on this repository only,
+with `contents: write` and `pull_requests: write`. The app's id and private
+key live in the engine repository, which mints a short-lived installation
+token per run. The app never needs read access to anything else.
+
+The job also writes `.github/private-names.txt` from a secret in the engine
+repository before it runs the script. The file is ignored, so it is never
+committed here.
+
+### Doing it by hand
 
 With both repositories checked out, point the script at the spec the engine
 generated:
@@ -120,48 +156,27 @@ Export `GRAPHSOLVE_SPEC_SOURCE` to skip the argument. The path is not written
 down here: this repository is public and the engine's is not.
 
 That copies the spec in, regenerates all three clients and the tool reference
-pages, and prints the diff.
+pages, sets the client versions, opens the changelog section and prints the
+diff.
 Review it: a removed tool, a newly required argument or a changed price is a
-breaking change. Record what changed in `CHANGELOG.md` under `## Unreleased`.
-Then bump the three client versions, run
-`python scripts/check_versions.py` and each language's gate, and open a PR.
+breaking change. Record what changed in the new `CHANGELOG.md` section. Then
+run each language's gate and open a PR.
 
 This needs no credentials in either direction, but it does need
 `.github/private-names.txt` in the checkout: the script refuses to run without
-it. Start here.
-
-### Automating it, when it becomes a chore
-
-Have the **engine's release workflow open a pull request here.** Two rules:
-
-1. **A pull request, never a push to `main`.** A spec-only push leaves the three
-   generated clients stale and turns `main` red on the drift check.
-2. **The PR must contain the spec and the regenerated clients.** So the engine
-   job checks this repository out, copies in `.github/private-names.txt` from
-   its own private copy, copies the spec, runs the four emitters (needs Python
-   and `rustfmt` on the runner), commits and opens the PR. The names file is
-   ignored, so `git add` never picks it up.
-   Regenerating on this side instead does not work: a PR opened by
-   `GITHUB_TOKEN` does not trigger `pull_request` workflows, so CI would never
-   run on it.
-
-The credential for that lives **in the engine repository**, scoped to this one:
-
-| Option | Verdict |
-|---|---|
-| Fine-grained PAT — `contents: write` + `pull_requests: write`, this repo only | Fine to start. Expires within a year and is tied to one person's account. |
-| GitHub App installed on both, minting a short-lived installation token | Not tied to a person, audits as its own identity, no expiry churn. |
-
-Either way, scope it to **this repository only** and to those two permissions.
-It never needs read access to anything.
+it.
 
 ## Versions
 
-**A client's major.minor is the engine API's; the patch is the client's own.** So
-any `1.2.x` client speaks engine `1.2`. `scripts/check_versions.py` checks this
-in CI against the spec's `info.version`, and checks that the Python
-package's `__version__` in `python/src/graphsolve/__init__.py` matches its
-`pyproject.toml`. Bump both together.
+**A client's version is the engine's.** Client `1.2.7` was generated from the
+engine `1.2.7` spec, and the three clients are released together with the
+engine. `scripts/check_versions.py` checks this in CI against the spec's
+`info.version`, and checks that the Python package's `__version__` in
+`python/src/graphsolve/__init__.py` matches its `pyproject.toml`.
+`scripts/set_version.py` sets all of them from the spec.
+
+A fix to a client alone waits for the next engine release, or the engine cuts
+a patch release to carry it.
 
 The spec's version is the engine's own release version — the same number the
 engine's release workflow asserts against its git tag.

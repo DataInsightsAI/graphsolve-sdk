@@ -137,8 +137,8 @@ Plain and factual. Say what the code does or why it is there, then stop.
 - Name the concrete failure if that is the point of the comment, e.g. "an older
   npm falls back to a classic publish and fails with ENEEDAUTH".
 - Do not editorialise. "Without this the rule is a sentence in a document rather
-  than something that holds" says nothing; "check every client claims the same
-  major.minor as the spec" says it all.
+  than something that holds" says nothing; "check every client carries the
+  spec's version" says it all.
 - Do not reference design documents, section numbers, prototypes or past
   experiments. Readers of this repo do not have them. Referring to files that
   are in this repo is fine.
