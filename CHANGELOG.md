@@ -4,10 +4,10 @@ What changed in each release of the GraphSolve clients: the Python package
 `graphsolve`, the TypeScript package `@graphsolve/sdk` and the Rust crate
 `graphsolve`.
 
-The three clients are built from the same API specification and usually
-release together under the same version number. A client's major.minor
-matches the engine API it speaks; the patch number is the client's own. Where
-a change affects only one language, the entry says so.
+The three clients are built from the same API specification and release
+together under the engine's version number, so each release here is the
+release of the engine with the same number. Where a change affects only one
+language, the entry says so.
 
 Each release lists its changes under these headings:
 
@@ -19,6 +19,52 @@ Each release lists its changes under these headings:
 - **Docs**: new documentation and examples.
 
 ## Unreleased
+
+## 1.0.65 — 2026-11-14
+
+The clients now take the engine's version number: this release was generated
+from the engine 1.0.65 API. There is no 1.0.51 to 1.0.64 of the clients.
+
+### Added
+
+- `run_transient_field` takes `slug_tracking` (a single line, off by default).
+  It tracks slug bodies as objects on a coarse grid, with cells of tens of
+  diameters, so slugging can be followed on a line of tens of kilometres. The
+  response adds `tracked_slugs`: the `events` (born, merged, died, left,
+  released) and, at each record, every body's front, tail, velocities and mean
+  holdup. It costs several times a plain run.
+- `run_transient_field`: an outlet choke takes `downstream_resistance`
+  (`gas` and `liquid`, in Pa per Sm³/s). The choke then discharges against
+  `outlet_pressure` plus the resistances times the rates through it, as a line
+  to a separator does.
+- `run_transient_field`, `run_transient_flux` and `run_transient_wave` take a
+  `closure` block, for studies that move one mechanism of the flow structure
+  at a time. Each field is optional and defaults to the calibrated value. A
+  value out of range, or on a scheme that does not take it, is refused by
+  name. The fields:
+  - oil and water: `emulsion`, `oil_water_slip`, `inversion_water_cut`,
+    `oil_water_interface` and `dispersed_cap`;
+  - the slug unit: `noslip_froude`, `malnes_coefficient`, `bubble_c0`,
+    `bubble_drift_coefficient` and `body_gas_drift_m_s`;
+  - the film: `annular_onset`, `taylor_film_friction`,
+    `dense_gas_film_friction`, `entrainment_cap`, `film_lift_angle_floor` and
+    `distributed_limit`;
+  - the stratified layer: `kh_band` and `wave_friction`;
+  - `regime_screens`, and on Field and Flux `zone_band`.
+- `trickle_detail` takes the same fields under `options`, so a screen can read
+  the structure a run carries.
+
+### Changed
+
+- All three clients are released together with the engine and carry its
+  version number. Before this release only the major and minor numbers
+  matched.
+
+### Docs
+
+- The transient guide has two new sections: closure studies (the protocol,
+  the fields by mechanism and a sweep example) and slug tracking on a long
+  line.
 
 ## 1.0.50 — 2026-11-03
 

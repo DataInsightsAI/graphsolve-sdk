@@ -4,7 +4,7 @@
 //! Run `python emit/emit_rust.py` after a spec change; CI fails if this
 //! file and the spec disagree.
 //!
-//! Engine API version: 1.0.50
+//! Engine API version: 1.0.65
 //! Tools: 103
 
 use serde::{Deserialize, Serialize};
@@ -2702,54 +2702,96 @@ pub struct RunTransientFieldParams {
     /// total gas, dissolved included, and an omitted rate is 0; `inlet_temperature`
     /// K; `water_salinity` ppm of the water entering; and `outlet`: `{"type":
     /// "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area":
-    /// <m2>, "cd": <default 0.84>}`. In the network and bare forms
-    /// `outlet_pressure`, `inlet_temperature` and a non-zero rate are required;
-    /// nothing is taken from the network's nodes. In the line form the nodes give
-    /// them: `boundary` then adds the outlet type, `water_salinity` and
-    /// `lift_gas_rate`, and may give the pressure or temperature only where the
-    /// nodes do not; a line's rates are always its source's. The run starts from
-    /// the steady state of this boundary, and Graphsolve-Flux needs a `pressure`
-    /// outlet at t = 0.  `schedule`: `\[{"at": <time in time.unit>, "set":
-    /// {<boundary fields>}}\]`. Fields not set carry forward. Rates,
-    /// `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the
-    /// previous event (t = 0 counts as one), so a lone event at 0.5 h is a
-    /// 30-minute ramp starting at t = 0; a `water_salinity` first given at a later
-    /// event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd`
-    /// and the outlet `type` step at the event. For a step in a ramped value, add
-    /// an event with an empty `set` at the same `at`, listed first. The outlet and
-    /// the inlet rates are the only valve controls: close the outlet for a valve
-    /// slam, set the rates to 0 for a shut-in. In the line form a `set` takes
-    /// `source` (fields of `source_sink_data`, carried forward and split again) and
-    /// `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`.
-    /// `results`: `detail` is `summary` (default: pressure, gas_fraction and
-    /// mixture_velocity at the outlet and inlet cells), `profiles` (the `variables`
-    /// listed, default those three, at every `cell_stride`-th cell plus both ends,
-    /// or at the `cells` listed by index from 0 at the outlet) or `full` (every
-    /// variable the scheme carries, every cell; `variables`, `cell_stride` and
-    /// `cells` are ignored). Variables: pressure, temperature, gas_fraction,
-    /// liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity,
-    /// mixture_density, oil_fraction, salinity, solution_gor, sound_speed,
-    /// oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about
-    /// two million values are refused.  `discretisation`: `max_cell_length` m
-    /// (default 50).  `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and
-    /// `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted;
-    /// the schemes hold their states inside the box, so widen it for a run that may
-    /// leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36)
-    /// and, for an equation-of-state fluid, `salinity_ppm` of its water.
-    /// `gas_transfer`: how gas moves between solution and the free phase,
-    /// `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"`
-    /// or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once
-    /// and never dissolves again. Field and Flux take any setting (Field takes
-    /// `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is
-    /// set, the steady state the run starts from holds the oil at saturation.
+    /// <m2>, "cd": <default 0.84>, "downstream_resistance": {"gas": <Pa per Sm3/s>,
+    /// "liquid": <Pa per Sm3/s>}}` (the resistance optional, Field only: the choke
+    /// then discharges against `outlet_pressure` plus the resistances times the
+    /// free gas and the liquid through it, as a line to a separator does). In the
+    /// network and bare forms `outlet_pressure`, `inlet_temperature` and a non-zero
+    /// rate are required; nothing is taken from the network's nodes. In the line
+    /// form the nodes give them: `boundary` then adds the outlet type,
+    /// `water_salinity` and `lift_gas_rate`, and may give the pressure or
+    /// temperature only where the nodes do not; a line's rates are always its
+    /// source's. The run starts from the steady state of this boundary, and
+    /// Graphsolve-Flux needs a `pressure` outlet at t = 0.  `schedule`: `\[{"at":
+    /// <time in time.unit>, "set": {<boundary fields>}}\]`. Fields not set carry
+    /// forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp
+    /// linearly from the previous event (t = 0 counts as one), so a lone event at
+    /// 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` first given
+    /// at a later event ramps from the fluid's own salinity. `inlet_temperature`,
+    /// choke `cd` and the outlet `type` step at the event. For a step in a ramped
+    /// value, add an event with an empty `set` at the same `at`, listed first. The
+    /// outlet and the inlet rates are the only valve controls: close the outlet for
+    /// a valve slam, set the rates to 0 for a shut-in. In the line form a `set`
+    /// takes `source` (fields of `source_sink_data`, carried forward and split
+    /// again) and `sink` (`boundary_pressure`) in place of rates and
+    /// `outlet_pressure`.  `results`: `detail` is `summary` (default: pressure,
+    /// gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles`
+    /// (the `variables` listed, default those three, at every `cell_stride`-th cell
+    /// plus both ends, or at the `cells` listed by index from 0 at the outlet) or
+    /// `full` (every variable the scheme carries, every cell; `variables`,
+    /// `cell_stride` and `cells` are ignored). Variables: pressure, temperature,
+    /// gas_fraction, liquid_holdup, gas_velocity, liquid_velocity,
+    /// mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor,
+    /// sound_speed, oil_holdup, water_holdup, oil_velocity, water_velocity.
+    /// Responses over about two million values are refused.  `discretisation`:
+    /// `max_cell_length` m (default 50).  `pvt`: the table's `p_min_mpa`,
+    /// `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and the t =
+    /// 0 boundary when omitted; the schemes hold their states inside the box, so
+    /// widen it for a run that may leave it), `pressure_nodes` (default 240),
+    /// `temperature_nodes` (default 36) and, for an equation-of-state fluid,
+    /// `salinity_ppm` of its water.  `gas_transfer`: how gas moves between solution
+    /// and the free phase, `{"liberation": <rate>, "dissolution": <rate>}`, each
+    /// `"none"`, `"instant"` or `{"time_constant_s": <s>}`. Omitted, gas comes out
+    /// of solution at once and never dissolves again. Field and Flux take any
+    /// setting (Field takes `instant` as a 1 s relaxation); Wave's is fixed at the
+    /// default. Whatever is set, the steady state the run starts from holds the oil
+    /// at saturation.  `closure` (every scheme; each field optional, its default
+    /// the closure's own): `emulsion` (true: the emulsion viscosity for mixed
+    /// liquids; false, the linear mix), `oil_water_slip` (true: drops of one liquid
+    /// drift through the other), `inversion_water_cut` (the water cut at phase
+    /// inversion, in place of the viscosity-ratio estimate), `oil_water_interface`
+    /// (`faster_layer`, the default, or `wavy`: the oil-water interfacial law of
+    /// stratified layers), `dispersed_cap` (default 1: an upper bound on the share
+    /// of the dispersed liquid held as drops; less keeps the rest in a layer at its
+    /// own velocity, a study of a liquid left behind), `noslip_froude` (default
+    /// \[4, 18\]: the band of drift Froude number over which the slug unit tends to
+    /// the no-slip mixture; raised, say \[40, 180\], the unit keeps its slip at
+    /// speed and its film falls back as churn flow does, a study of a riser's
+    /// liquid) and, Field and Flux, `zone_band` (default \[0.001, 0.05\]: the
+    /// holdup band over which a liquid zone's momentum row blends from riding its
+    /// carrier to its own force balance; a thin water layer rides the oil below its
+    /// top), `regime_screens` (default false: skip the closures the transition
+    /// criteria rule out), the kernel's numbers given beside them
+    /// (`malnes_coefficient` 83, `bubble_c0` 1.2, `bubble_drift_coefficient` 0.35,
+    /// `body_gas_drift_m_s` 0.2, `distributed_limit` \[1.5, 3\],
+    /// `film_lift_angle_floor` 0.3, `annular_onset` \[1, 1.5\],
+    /// `taylor_film_friction` 0.005, `dense_gas_film_friction` 30,
+    /// `entrainment_cap` 0.35, `wave_friction` {coefficient 15, onset_velocity_m_s
+    /// 5, density_cap 4}, `kh_band` \[0.8, 1.25\]), Flux's `deposition_coefficient`
+    /// (2.3e-4) and Field's `drop_relaxation_transits` (1). None of these is a
+    /// calibrated setting: omitted, every scheme runs the closure as calibrated,
+    /// and a value out of range or on the wrong scheme is refused by name.
     /// `slug_capturing`: true (Field only, default false) runs the closure's
     /// separated flow alone, so slugs form on the grid as cells that fill with
-    /// liquid; it needs cells of the order of the pipe diameter. `steps`: Field
-    /// takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and
-    /// `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone;
-    /// Wave's step is set by its CFL limit and it refuses `steps`.  `equipment`
-    /// (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure;
-    /// `well`, `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// liquid; it needs cells of the order of the pipe diameter. `slug_tracking`
+    /// (Field only, a single line, default off): `{}` or `{"train_unit_length_m":
+    /// 300, "max_body_holdup": 0.9, "min_birth_cells": 3, "site_window_m": 1000,
+    /// "birth_setback_m": 200, "wake_amplitude": 8, "wake_decay": 1.06,
+    /// "min_length_d": 1, "length_spread": 0.5, "seed_level_cos": 0.3, "seed": 1}`
+    /// tracks slug bodies as objects on a coarse grid (cells of tens of diameters):
+    /// where the closure holds a slug unit the grid carries the separated flow and
+    /// the bodies ride on it, born at the unit's onset, laid along the line at the
+    /// start one per `train_unit_length_m`, released to the grid's own closure
+    /// where the closure holds no unit (a riser). It costs several times a plain
+    /// run; the response adds `tracked_slugs`: `events` (born, merged, died, left,
+    /// released, each with `t_s`, `id`, `x_m` from the outlet and `length_m`) and
+    /// `snapshots` at each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`,
+    /// `holdup_mean` per body). `steps`: Field takes `dt_s`, `dt_min_s`,
+    /// `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change`
+    /// (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its
+    /// CFL limit and it refuses `steps`.  `equipment` (Field only):
+    /// `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`,
+    /// `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
     /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
     /// above it the reservoir takes fluid back along the last segment) or `{"type":
     /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
@@ -2767,12 +2809,12 @@ pub struct RunTransientFieldParams {
     /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
     /// retries shorter (a step accepted at the shortest length is counted in
     /// `failed_steps`), and Field treats a state outside it as a failed step.
-    /// Solver options other than `flow_model`, `steps`, `gas_transfer`,
-    /// `slug_capturing` and `equipment` cannot be set. `solver` is set from the
-    /// tool. Graphsolve-Field also takes a network (gathering and splitting, one
-    /// outlet or several, `boundary.outlets`): `network_payload` with
-    /// `network.branches` (each `{name, path}`), or bare `branches` (each `{name,
-    /// segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`, `closure`,
+    /// `slug_capturing`, `slug_tracking` and `equipment` cannot be set. `solver` is
+    /// set from the tool. Graphsolve-Field also takes a network (gathering and
+    /// splitting, one outlet or several, `boundary.outlets`): `network_payload`
+    /// with `network.branches` (each `{name, path}`), or bare `branches` (each
+    /// `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each
     /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
     /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
     /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and
@@ -2835,54 +2877,96 @@ pub struct RunTransientFluxParams {
     /// total gas, dissolved included, and an omitted rate is 0; `inlet_temperature`
     /// K; `water_salinity` ppm of the water entering; and `outlet`: `{"type":
     /// "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area":
-    /// <m2>, "cd": <default 0.84>}`. In the network and bare forms
-    /// `outlet_pressure`, `inlet_temperature` and a non-zero rate are required;
-    /// nothing is taken from the network's nodes. In the line form the nodes give
-    /// them: `boundary` then adds the outlet type, `water_salinity` and
-    /// `lift_gas_rate`, and may give the pressure or temperature only where the
-    /// nodes do not; a line's rates are always its source's. The run starts from
-    /// the steady state of this boundary, and Graphsolve-Flux needs a `pressure`
-    /// outlet at t = 0.  `schedule`: `\[{"at": <time in time.unit>, "set":
-    /// {<boundary fields>}}\]`. Fields not set carry forward. Rates,
-    /// `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the
-    /// previous event (t = 0 counts as one), so a lone event at 0.5 h is a
-    /// 30-minute ramp starting at t = 0; a `water_salinity` first given at a later
-    /// event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd`
-    /// and the outlet `type` step at the event. For a step in a ramped value, add
-    /// an event with an empty `set` at the same `at`, listed first. The outlet and
-    /// the inlet rates are the only valve controls: close the outlet for a valve
-    /// slam, set the rates to 0 for a shut-in. In the line form a `set` takes
-    /// `source` (fields of `source_sink_data`, carried forward and split again) and
-    /// `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`.
-    /// `results`: `detail` is `summary` (default: pressure, gas_fraction and
-    /// mixture_velocity at the outlet and inlet cells), `profiles` (the `variables`
-    /// listed, default those three, at every `cell_stride`-th cell plus both ends,
-    /// or at the `cells` listed by index from 0 at the outlet) or `full` (every
-    /// variable the scheme carries, every cell; `variables`, `cell_stride` and
-    /// `cells` are ignored). Variables: pressure, temperature, gas_fraction,
-    /// liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity,
-    /// mixture_density, oil_fraction, salinity, solution_gor, sound_speed,
-    /// oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about
-    /// two million values are refused.  `discretisation`: `max_cell_length` m
-    /// (default 50).  `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and
-    /// `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted;
-    /// the schemes hold their states inside the box, so widen it for a run that may
-    /// leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36)
-    /// and, for an equation-of-state fluid, `salinity_ppm` of its water.
-    /// `gas_transfer`: how gas moves between solution and the free phase,
-    /// `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"`
-    /// or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once
-    /// and never dissolves again. Field and Flux take any setting (Field takes
-    /// `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is
-    /// set, the steady state the run starts from holds the oil at saturation.
+    /// <m2>, "cd": <default 0.84>, "downstream_resistance": {"gas": <Pa per Sm3/s>,
+    /// "liquid": <Pa per Sm3/s>}}` (the resistance optional, Field only: the choke
+    /// then discharges against `outlet_pressure` plus the resistances times the
+    /// free gas and the liquid through it, as a line to a separator does). In the
+    /// network and bare forms `outlet_pressure`, `inlet_temperature` and a non-zero
+    /// rate are required; nothing is taken from the network's nodes. In the line
+    /// form the nodes give them: `boundary` then adds the outlet type,
+    /// `water_salinity` and `lift_gas_rate`, and may give the pressure or
+    /// temperature only where the nodes do not; a line's rates are always its
+    /// source's. The run starts from the steady state of this boundary, and
+    /// Graphsolve-Flux needs a `pressure` outlet at t = 0.  `schedule`: `\[{"at":
+    /// <time in time.unit>, "set": {<boundary fields>}}\]`. Fields not set carry
+    /// forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp
+    /// linearly from the previous event (t = 0 counts as one), so a lone event at
+    /// 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` first given
+    /// at a later event ramps from the fluid's own salinity. `inlet_temperature`,
+    /// choke `cd` and the outlet `type` step at the event. For a step in a ramped
+    /// value, add an event with an empty `set` at the same `at`, listed first. The
+    /// outlet and the inlet rates are the only valve controls: close the outlet for
+    /// a valve slam, set the rates to 0 for a shut-in. In the line form a `set`
+    /// takes `source` (fields of `source_sink_data`, carried forward and split
+    /// again) and `sink` (`boundary_pressure`) in place of rates and
+    /// `outlet_pressure`.  `results`: `detail` is `summary` (default: pressure,
+    /// gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles`
+    /// (the `variables` listed, default those three, at every `cell_stride`-th cell
+    /// plus both ends, or at the `cells` listed by index from 0 at the outlet) or
+    /// `full` (every variable the scheme carries, every cell; `variables`,
+    /// `cell_stride` and `cells` are ignored). Variables: pressure, temperature,
+    /// gas_fraction, liquid_holdup, gas_velocity, liquid_velocity,
+    /// mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor,
+    /// sound_speed, oil_holdup, water_holdup, oil_velocity, water_velocity.
+    /// Responses over about two million values are refused.  `discretisation`:
+    /// `max_cell_length` m (default 50).  `pvt`: the table's `p_min_mpa`,
+    /// `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and the t =
+    /// 0 boundary when omitted; the schemes hold their states inside the box, so
+    /// widen it for a run that may leave it), `pressure_nodes` (default 240),
+    /// `temperature_nodes` (default 36) and, for an equation-of-state fluid,
+    /// `salinity_ppm` of its water.  `gas_transfer`: how gas moves between solution
+    /// and the free phase, `{"liberation": <rate>, "dissolution": <rate>}`, each
+    /// `"none"`, `"instant"` or `{"time_constant_s": <s>}`. Omitted, gas comes out
+    /// of solution at once and never dissolves again. Field and Flux take any
+    /// setting (Field takes `instant` as a 1 s relaxation); Wave's is fixed at the
+    /// default. Whatever is set, the steady state the run starts from holds the oil
+    /// at saturation.  `closure` (every scheme; each field optional, its default
+    /// the closure's own): `emulsion` (true: the emulsion viscosity for mixed
+    /// liquids; false, the linear mix), `oil_water_slip` (true: drops of one liquid
+    /// drift through the other), `inversion_water_cut` (the water cut at phase
+    /// inversion, in place of the viscosity-ratio estimate), `oil_water_interface`
+    /// (`faster_layer`, the default, or `wavy`: the oil-water interfacial law of
+    /// stratified layers), `dispersed_cap` (default 1: an upper bound on the share
+    /// of the dispersed liquid held as drops; less keeps the rest in a layer at its
+    /// own velocity, a study of a liquid left behind), `noslip_froude` (default
+    /// \[4, 18\]: the band of drift Froude number over which the slug unit tends to
+    /// the no-slip mixture; raised, say \[40, 180\], the unit keeps its slip at
+    /// speed and its film falls back as churn flow does, a study of a riser's
+    /// liquid) and, Field and Flux, `zone_band` (default \[0.001, 0.05\]: the
+    /// holdup band over which a liquid zone's momentum row blends from riding its
+    /// carrier to its own force balance; a thin water layer rides the oil below its
+    /// top), `regime_screens` (default false: skip the closures the transition
+    /// criteria rule out), the kernel's numbers given beside them
+    /// (`malnes_coefficient` 83, `bubble_c0` 1.2, `bubble_drift_coefficient` 0.35,
+    /// `body_gas_drift_m_s` 0.2, `distributed_limit` \[1.5, 3\],
+    /// `film_lift_angle_floor` 0.3, `annular_onset` \[1, 1.5\],
+    /// `taylor_film_friction` 0.005, `dense_gas_film_friction` 30,
+    /// `entrainment_cap` 0.35, `wave_friction` {coefficient 15, onset_velocity_m_s
+    /// 5, density_cap 4}, `kh_band` \[0.8, 1.25\]), Flux's `deposition_coefficient`
+    /// (2.3e-4) and Field's `drop_relaxation_transits` (1). None of these is a
+    /// calibrated setting: omitted, every scheme runs the closure as calibrated,
+    /// and a value out of range or on the wrong scheme is refused by name.
     /// `slug_capturing`: true (Field only, default false) runs the closure's
     /// separated flow alone, so slugs form on the grid as cells that fill with
-    /// liquid; it needs cells of the order of the pipe diameter. `steps`: Field
-    /// takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and
-    /// `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone;
-    /// Wave's step is set by its CFL limit and it refuses `steps`.  `equipment`
-    /// (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure;
-    /// `well`, `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// liquid; it needs cells of the order of the pipe diameter. `slug_tracking`
+    /// (Field only, a single line, default off): `{}` or `{"train_unit_length_m":
+    /// 300, "max_body_holdup": 0.9, "min_birth_cells": 3, "site_window_m": 1000,
+    /// "birth_setback_m": 200, "wake_amplitude": 8, "wake_decay": 1.06,
+    /// "min_length_d": 1, "length_spread": 0.5, "seed_level_cos": 0.3, "seed": 1}`
+    /// tracks slug bodies as objects on a coarse grid (cells of tens of diameters):
+    /// where the closure holds a slug unit the grid carries the separated flow and
+    /// the bodies ride on it, born at the unit's onset, laid along the line at the
+    /// start one per `train_unit_length_m`, released to the grid's own closure
+    /// where the closure holds no unit (a riser). It costs several times a plain
+    /// run; the response adds `tracked_slugs`: `events` (born, merged, died, left,
+    /// released, each with `t_s`, `id`, `x_m` from the outlet and `length_m`) and
+    /// `snapshots` at each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`,
+    /// `holdup_mean` per body). `steps`: Field takes `dt_s`, `dt_min_s`,
+    /// `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change`
+    /// (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its
+    /// CFL limit and it refuses `steps`.  `equipment` (Field only):
+    /// `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`,
+    /// `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
     /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
     /// above it the reservoir takes fluid back along the last segment) or `{"type":
     /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
@@ -2900,12 +2984,12 @@ pub struct RunTransientFluxParams {
     /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
     /// retries shorter (a step accepted at the shortest length is counted in
     /// `failed_steps`), and Field treats a state outside it as a failed step.
-    /// Solver options other than `flow_model`, `steps`, `gas_transfer`,
-    /// `slug_capturing` and `equipment` cannot be set. `solver` is set from the
-    /// tool. Graphsolve-Field also takes a network (gathering and splitting, one
-    /// outlet or several, `boundary.outlets`): `network_payload` with
-    /// `network.branches` (each `{name, path}`), or bare `branches` (each `{name,
-    /// segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`, `closure`,
+    /// `slug_capturing`, `slug_tracking` and `equipment` cannot be set. `solver` is
+    /// set from the tool. Graphsolve-Field also takes a network (gathering and
+    /// splitting, one outlet or several, `boundary.outlets`): `network_payload`
+    /// with `network.branches` (each `{name, path}`), or bare `branches` (each
+    /// `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each
     /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
     /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
     /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and
@@ -2968,54 +3052,96 @@ pub struct RunTransientWaveParams {
     /// total gas, dissolved included, and an omitted rate is 0; `inlet_temperature`
     /// K; `water_salinity` ppm of the water entering; and `outlet`: `{"type":
     /// "pressure"}` (default), `{"type": "closed"}` or `{"type": "choke", "area":
-    /// <m2>, "cd": <default 0.84>}`. In the network and bare forms
-    /// `outlet_pressure`, `inlet_temperature` and a non-zero rate are required;
-    /// nothing is taken from the network's nodes. In the line form the nodes give
-    /// them: `boundary` then adds the outlet type, `water_salinity` and
-    /// `lift_gas_rate`, and may give the pressure or temperature only where the
-    /// nodes do not; a line's rates are always its source's. The run starts from
-    /// the steady state of this boundary, and Graphsolve-Flux needs a `pressure`
-    /// outlet at t = 0.  `schedule`: `\[{"at": <time in time.unit>, "set":
-    /// {<boundary fields>}}\]`. Fields not set carry forward. Rates,
-    /// `outlet_pressure`, choke `area` and `water_salinity` ramp linearly from the
-    /// previous event (t = 0 counts as one), so a lone event at 0.5 h is a
-    /// 30-minute ramp starting at t = 0; a `water_salinity` first given at a later
-    /// event ramps from the fluid's own salinity. `inlet_temperature`, choke `cd`
-    /// and the outlet `type` step at the event. For a step in a ramped value, add
-    /// an event with an empty `set` at the same `at`, listed first. The outlet and
-    /// the inlet rates are the only valve controls: close the outlet for a valve
-    /// slam, set the rates to 0 for a shut-in. In the line form a `set` takes
-    /// `source` (fields of `source_sink_data`, carried forward and split again) and
-    /// `sink` (`boundary_pressure`) in place of rates and `outlet_pressure`.
-    /// `results`: `detail` is `summary` (default: pressure, gas_fraction and
-    /// mixture_velocity at the outlet and inlet cells), `profiles` (the `variables`
-    /// listed, default those three, at every `cell_stride`-th cell plus both ends,
-    /// or at the `cells` listed by index from 0 at the outlet) or `full` (every
-    /// variable the scheme carries, every cell; `variables`, `cell_stride` and
-    /// `cells` are ignored). Variables: pressure, temperature, gas_fraction,
-    /// liquid_holdup, gas_velocity, liquid_velocity, mixture_velocity,
-    /// mixture_density, oil_fraction, salinity, solution_gor, sound_speed,
-    /// oil_holdup, water_holdup, oil_velocity, water_velocity. Responses over about
-    /// two million values are refused.  `discretisation`: `max_cell_length` m
-    /// (default 50).  `pvt`: the table's `p_min_mpa`, `p_max_mpa`, `t_min_k` and
-    /// `t_max_k` (inferred from the geometry and the t = 0 boundary when omitted;
-    /// the schemes hold their states inside the box, so widen it for a run that may
-    /// leave it), `pressure_nodes` (default 240), `temperature_nodes` (default 36)
-    /// and, for an equation-of-state fluid, `salinity_ppm` of its water.
-    /// `gas_transfer`: how gas moves between solution and the free phase,
-    /// `{"liberation": <rate>, "dissolution": <rate>}`, each `"none"`, `"instant"`
-    /// or `{"time_constant_s": <s>}`. Omitted, gas comes out of solution at once
-    /// and never dissolves again. Field and Flux take any setting (Field takes
-    /// `instant` as a 1 s relaxation); Wave's is fixed at the default. Whatever is
-    /// set, the steady state the run starts from holds the oil at saturation.
+    /// <m2>, "cd": <default 0.84>, "downstream_resistance": {"gas": <Pa per Sm3/s>,
+    /// "liquid": <Pa per Sm3/s>}}` (the resistance optional, Field only: the choke
+    /// then discharges against `outlet_pressure` plus the resistances times the
+    /// free gas and the liquid through it, as a line to a separator does). In the
+    /// network and bare forms `outlet_pressure`, `inlet_temperature` and a non-zero
+    /// rate are required; nothing is taken from the network's nodes. In the line
+    /// form the nodes give them: `boundary` then adds the outlet type,
+    /// `water_salinity` and `lift_gas_rate`, and may give the pressure or
+    /// temperature only where the nodes do not; a line's rates are always its
+    /// source's. The run starts from the steady state of this boundary, and
+    /// Graphsolve-Flux needs a `pressure` outlet at t = 0.  `schedule`: `\[{"at":
+    /// <time in time.unit>, "set": {<boundary fields>}}\]`. Fields not set carry
+    /// forward. Rates, `outlet_pressure`, choke `area` and `water_salinity` ramp
+    /// linearly from the previous event (t = 0 counts as one), so a lone event at
+    /// 0.5 h is a 30-minute ramp starting at t = 0; a `water_salinity` first given
+    /// at a later event ramps from the fluid's own salinity. `inlet_temperature`,
+    /// choke `cd` and the outlet `type` step at the event. For a step in a ramped
+    /// value, add an event with an empty `set` at the same `at`, listed first. The
+    /// outlet and the inlet rates are the only valve controls: close the outlet for
+    /// a valve slam, set the rates to 0 for a shut-in. In the line form a `set`
+    /// takes `source` (fields of `source_sink_data`, carried forward and split
+    /// again) and `sink` (`boundary_pressure`) in place of rates and
+    /// `outlet_pressure`.  `results`: `detail` is `summary` (default: pressure,
+    /// gas_fraction and mixture_velocity at the outlet and inlet cells), `profiles`
+    /// (the `variables` listed, default those three, at every `cell_stride`-th cell
+    /// plus both ends, or at the `cells` listed by index from 0 at the outlet) or
+    /// `full` (every variable the scheme carries, every cell; `variables`,
+    /// `cell_stride` and `cells` are ignored). Variables: pressure, temperature,
+    /// gas_fraction, liquid_holdup, gas_velocity, liquid_velocity,
+    /// mixture_velocity, mixture_density, oil_fraction, salinity, solution_gor,
+    /// sound_speed, oil_holdup, water_holdup, oil_velocity, water_velocity.
+    /// Responses over about two million values are refused.  `discretisation`:
+    /// `max_cell_length` m (default 50).  `pvt`: the table's `p_min_mpa`,
+    /// `p_max_mpa`, `t_min_k` and `t_max_k` (inferred from the geometry and the t =
+    /// 0 boundary when omitted; the schemes hold their states inside the box, so
+    /// widen it for a run that may leave it), `pressure_nodes` (default 240),
+    /// `temperature_nodes` (default 36) and, for an equation-of-state fluid,
+    /// `salinity_ppm` of its water.  `gas_transfer`: how gas moves between solution
+    /// and the free phase, `{"liberation": <rate>, "dissolution": <rate>}`, each
+    /// `"none"`, `"instant"` or `{"time_constant_s": <s>}`. Omitted, gas comes out
+    /// of solution at once and never dissolves again. Field and Flux take any
+    /// setting (Field takes `instant` as a 1 s relaxation); Wave's is fixed at the
+    /// default. Whatever is set, the steady state the run starts from holds the oil
+    /// at saturation.  `closure` (every scheme; each field optional, its default
+    /// the closure's own): `emulsion` (true: the emulsion viscosity for mixed
+    /// liquids; false, the linear mix), `oil_water_slip` (true: drops of one liquid
+    /// drift through the other), `inversion_water_cut` (the water cut at phase
+    /// inversion, in place of the viscosity-ratio estimate), `oil_water_interface`
+    /// (`faster_layer`, the default, or `wavy`: the oil-water interfacial law of
+    /// stratified layers), `dispersed_cap` (default 1: an upper bound on the share
+    /// of the dispersed liquid held as drops; less keeps the rest in a layer at its
+    /// own velocity, a study of a liquid left behind), `noslip_froude` (default
+    /// \[4, 18\]: the band of drift Froude number over which the slug unit tends to
+    /// the no-slip mixture; raised, say \[40, 180\], the unit keeps its slip at
+    /// speed and its film falls back as churn flow does, a study of a riser's
+    /// liquid) and, Field and Flux, `zone_band` (default \[0.001, 0.05\]: the
+    /// holdup band over which a liquid zone's momentum row blends from riding its
+    /// carrier to its own force balance; a thin water layer rides the oil below its
+    /// top), `regime_screens` (default false: skip the closures the transition
+    /// criteria rule out), the kernel's numbers given beside them
+    /// (`malnes_coefficient` 83, `bubble_c0` 1.2, `bubble_drift_coefficient` 0.35,
+    /// `body_gas_drift_m_s` 0.2, `distributed_limit` \[1.5, 3\],
+    /// `film_lift_angle_floor` 0.3, `annular_onset` \[1, 1.5\],
+    /// `taylor_film_friction` 0.005, `dense_gas_film_friction` 30,
+    /// `entrainment_cap` 0.35, `wave_friction` {coefficient 15, onset_velocity_m_s
+    /// 5, density_cap 4}, `kh_band` \[0.8, 1.25\]), Flux's `deposition_coefficient`
+    /// (2.3e-4) and Field's `drop_relaxation_transits` (1). None of these is a
+    /// calibrated setting: omitted, every scheme runs the closure as calibrated,
+    /// and a value out of range or on the wrong scheme is refused by name.
     /// `slug_capturing`: true (Field only, default false) runs the closure's
     /// separated flow alone, so slugs form on the grid as cells that fill with
-    /// liquid; it needs cells of the order of the pipe diameter. `steps`: Field
-    /// takes `dt_s`, `dt_min_s`, `dt_max_s`, `max_holdup_change` (default 0.1) and
-    /// `max_pressure_change` (default 0.05) per step; Flux takes `dt_s` alone;
-    /// Wave's step is set by its CFL limit and it refuses `steps`.  `equipment`
-    /// (Field only): `inlet_gas_volume` m3 of gas behind the inlet at its pressure;
-    /// `well`, `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
+    /// liquid; it needs cells of the order of the pipe diameter. `slug_tracking`
+    /// (Field only, a single line, default off): `{}` or `{"train_unit_length_m":
+    /// 300, "max_body_holdup": 0.9, "min_birth_cells": 3, "site_window_m": 1000,
+    /// "birth_setback_m": 200, "wake_amplitude": 8, "wake_decay": 1.06,
+    /// "min_length_d": 1, "length_spread": 0.5, "seed_level_cos": 0.3, "seed": 1}`
+    /// tracks slug bodies as objects on a coarse grid (cells of tens of diameters):
+    /// where the closure holds a slug unit the grid carries the separated flow and
+    /// the bodies ride on it, born at the unit's onset, laid along the line at the
+    /// start one per `train_unit_length_m`, released to the grid's own closure
+    /// where the closure holds no unit (a riser). It costs several times a plain
+    /// run; the response adds `tracked_slugs`: `events` (born, merged, died, left,
+    /// released, each with `t_s`, `id`, `x_m` from the outlet and `length_m`) and
+    /// `snapshots` at each record (`id`, `front_m`, `tail_m`, `u_tail`, `u_front`,
+    /// `holdup_mean` per body). `steps`: Field takes `dt_s`, `dt_min_s`,
+    /// `dt_max_s`, `max_holdup_change` (default 0.1) and `max_pressure_change`
+    /// (default 0.05) per step; Flux takes `dt_s` alone; Wave's step is set by its
+    /// CFL limit and it refuses `steps`.  `equipment` (Field only):
+    /// `inlet_gas_volume` m3 of gas behind the inlet at its pressure; `well`,
+    /// `{"type": "table", "points": \[{"pressure", "oil_rate", "gas_rate",
     /// "water_rate"}\]}` (MPa, kSm3/day; the highest pressure is where it stops;
     /// above it the reservoir takes fluid back along the last segment) or `{"type":
     /// "inflow_model", "inflow": <engine inflow input with its fluid>, "points":
@@ -3033,12 +3159,12 @@ pub struct RunTransientWaveParams {
     /// over: Wave clamps a cell to it, Flux refuses a step that would leave it and
     /// retries shorter (a step accepted at the shortest length is counted in
     /// `failed_steps`), and Field treats a state outside it as a failed step.
-    /// Solver options other than `flow_model`, `steps`, `gas_transfer`,
-    /// `slug_capturing` and `equipment` cannot be set. `solver` is set from the
-    /// tool. Graphsolve-Field also takes a network (gathering and splitting, one
-    /// outlet or several, `boundary.outlets`): `network_payload` with
-    /// `network.branches` (each `{name, path}`), or bare `branches` (each `{name,
-    /// segments, downstream, upstream}`) with `fluid`, and `sources` (each
+    /// Solver options other than `flow_model`, `steps`, `gas_transfer`, `closure`,
+    /// `slug_capturing`, `slug_tracking` and `equipment` cannot be set. `solver` is
+    /// set from the tool. Graphsolve-Field also takes a network (gathering and
+    /// splitting, one outlet or several, `boundary.outlets`): `network_payload`
+    /// with `network.branches` (each `{name, path}`), or bare `branches` (each
+    /// `{name, segments, downstream, upstream}`) with `fluid`, and `sources` (each
     /// `{branch, oil_rate, water_rate, gas_rate, inlet_temperature, well}`).  The
     /// result is `stats` (cells, length_m, simulated_s, steps, ...) and
     /// `recording`: `geometry` of the recorded cells, `time_s`, `n_cells`, and

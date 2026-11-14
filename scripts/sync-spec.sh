@@ -61,6 +61,11 @@ if grep -niE "$private" "$SOURCE"; then
   exit 1
 fi
 
+# Kept to list the tools the new spec adds or removes in the changelog.
+PREVIOUS="$(mktemp)"
+trap 'rm -f "$PREVIOUS"' EXIT
+cp "$DEST" "$PREVIOUS"
+
 cp "$SOURCE" "$DEST"
 
 python3 "$ROOT/emit/emit_python.py"
@@ -68,13 +73,18 @@ python3 "$ROOT/emit/emit_typescript.py"
 python3 "$ROOT/emit/emit_rust.py"
 python3 "$ROOT/emit/emit_docs.py"
 
+# The clients carry the engine's version.
+python3 "$ROOT/scripts/set_version.py"
+python3 "$ROOT/scripts/check_versions.py"
+python3 "$ROOT/scripts/changelog_entry.py" "$PREVIOUS"
+
 echo
-git -C "$ROOT" --no-pager diff --stat -- spec python typescript rust docs/reference/tools || true
+git -C "$ROOT" --no-pager diff --stat -- spec python typescript rust docs/reference/tools CHANGELOG.md || true
 git -C "$ROOT" status --short -- docs/reference/tools
 echo
 echo "Now:"
 echo "  1. review the diff — a removed tool or a newly required argument is a"
 echo "     breaking change"
-echo "  2. bump the three client versions to match the spec's major.minor"
-echo "  3. python scripts/check_versions.py"
-echo "  4. run each language's gate (see CONTRIBUTING.md)"
+echo "  2. edit the new CHANGELOG.md section: it lists added and removed tools"
+echo "     only, not changed arguments, prices or behaviour"
+echo "  3. run each language's gate (see CONTRIBUTING.md)"

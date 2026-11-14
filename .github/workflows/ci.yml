@@ -213,7 +213,7 @@ jobs:
       - run: pip install -r docs/requirements.txt
       - run: scripts/build-docs.sh
 
-  # Check every client claims the same major.minor as the spec.
+  # Check every client carries the spec's version.
   versions:
     runs-on: ubuntu-latest
     steps:

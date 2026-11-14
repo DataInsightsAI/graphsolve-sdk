@@ -53,14 +53,15 @@ The tool reference in the documentation is generated from the same spec.
 Method and argument names are the API's own — `solve_network`, `network_json` —
 in every language, so the documentation and the code always agree.
 
-Releases are per-language and independent — tags look like `python-v1.2.0`,
-`ts-v1.2.0` and `rust-v1.2.0`. [`CHANGELOG.md`](CHANGELOG.md) lists what each
+The three clients are released together under one version, each from its own
+tag: `python-v1.2.0`, `ts-v1.2.0` and `rust-v1.2.0`. [`CHANGELOG.md`](CHANGELOG.md) lists what each
 release adds, changes or breaks.
 
 ## Versioning
 
-A client's **major.minor matches the engine API it speaks**; the patch number is
-the client's own. Any `1.2.x` client works against engine `1.2`.
+A client's **version is the version of the engine API it was generated from**.
+The three clients are released together with the engine, so `1.2.7` of each
+speaks engine `1.2.7`.
 
 ## Getting an API key
 
