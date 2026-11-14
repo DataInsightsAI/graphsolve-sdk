@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Check every client claims the same major.minor as the spec.
+"""Check every client carries the spec's version.
 
-A client's major.minor tracks the engine API it speaks; the patch is the
-client's own. So any 1.2.x client works against engine 1.2.
+The clients are released with the engine and take its version number, so a
+1.2.7 client was generated from the engine 1.2.7 spec.
 
 Also checks the Python package's `__version__` matches its pyproject.toml,
 since the literal is easy to miss in a bump.
@@ -19,14 +19,6 @@ import sys
 import tomllib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-
-
-def minor(version: str) -> str:
-    """`1.2.7` -> `1.2`."""
-    parts = version.split(".")
-    if len(parts) < 2:
-        raise SystemExit(f"not a version: {version!r}")
-    return ".".join(parts[:2])
 
 
 def read_versions() -> dict[str, str]:
@@ -59,11 +51,11 @@ def main() -> int:
         )
         return 1
 
-    target = minor(versions["spec"])
+    target = versions["spec"]
     wrong = {
         name: version
         for name, version in versions.items()
-        if name != "spec" and minor(version) != target
+        if name != "spec" and version != target
     }
 
     for name, version in versions.items():
@@ -71,15 +63,15 @@ def main() -> int:
 
     if wrong:
         print()
-        print(f"::error::the spec speaks {target}, so every client must be {target}.x")
+        print(f"::error::the spec is {target}, so every client must be {target}")
         for name, version in wrong.items():
             print(f"::error::  {name} claims {version}")
         print(
-            "::error::Bump the client versions to match. See MAINTAINING.md."
+            "::error::Run scripts/set_version.py. See MAINTAINING.md."
         )
         return 1
 
-    print(f"\nall clients speak engine {target}")
+    print(f"\nall clients are engine {target}")
     return 0
 
 

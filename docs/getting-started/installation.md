@@ -37,5 +37,5 @@
     graphsolve me
     ```
 
-Pin the version in production. A client's major and minor version match the
-API version it was generated from; the patch number is the client's own.
+Pin the version in production. A client's version is the version of the API
+it was generated from.

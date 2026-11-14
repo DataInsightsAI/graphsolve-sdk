@@ -4,10 +4,10 @@ What changed in each release of the GraphSolve clients: the Python package
 `graphsolve`, the TypeScript package `@graphsolve/sdk` and the Rust crate
 `graphsolve`.
 
-The three clients are built from the same API specification and usually
-release together under the same version number. A client's major.minor
-matches the engine API it speaks; the patch number is the client's own. Where
-a change affects only one language, the entry says so.
+The three clients are built from the same API specification and release
+together under the engine's version number, so each release here is the
+release of the engine with the same number. Where a change affects only one
+language, the entry says so.
 
 Each release lists its changes under these headings:
 
